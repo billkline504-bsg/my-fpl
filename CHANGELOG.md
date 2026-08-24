@@ -7,6 +7,15 @@ this file existed (the original 8 build phases, automated gameweek
 finalization, and cup competitions) is narrated in
 [docs/plan.md](docs/plan.md) instead — this file picks up from there.
 
+## 2026-08-24 — Fix stale icons after re-upload
+
+- Icon uploads (`uploadIconFile` in `apps/api/src/domain/icons.ts`) now
+  append a `?v=<timestamp>` cache-buster to the stored `iconUrl`. Uploads
+  upsert to a stable per-entity storage path with a long browser cache
+  lifetime, so re-uploading a new icon was previously invisible in a
+  browser that had already cached the old one at that URL until the
+  cache naturally expired.
+
 ## 2026-08-24 — Icon uploads for leagues, teams, and cups
 
 - Added an uploadable icon per league, per manager ("team" icon — there's

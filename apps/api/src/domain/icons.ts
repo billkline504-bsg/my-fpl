@@ -24,5 +24,10 @@ export async function uploadIconFile(
   const {
     data: { publicUrl },
   } = storage.from(ICONS_BUCKET).getPublicUrl(params.path);
-  return publicUrl;
+
+  // Uploads upsert to a stable per-entity path, and the bucket sets a long
+  // cache lifetime — without a cache-busting suffix, a browser that already
+  // fetched the old icon at this URL would keep showing it after a
+  // re-upload until its cache naturally expired.
+  return `${publicUrl}?v=${Date.now()}`;
 }
