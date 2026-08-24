@@ -8,5 +8,6 @@ export * from "./cups/roundCount.js";
 export * from "./cups/pairing.js";
 export * from "./cups/tiebreak.js";
 export * from "./icons.js";
+export * from "./reminders/eligibility.js";
 export * from "./api/types.js";
 export * from "./api/client.js";

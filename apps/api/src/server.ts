@@ -5,6 +5,7 @@ import { MAX_ICON_SIZE_BYTES } from "@my-fpl/shared";
 import authenticatePlugin from "./plugins/authenticate.js";
 import dbPlugin from "./plugins/db.js";
 import fplSyncSchedulePlugin from "./plugins/fplSyncSchedule.js";
+import reminderSchedulePlugin from "./plugins/reminderSchedule.js";
 import storagePlugin from "./plugins/storage.js";
 import cupRoutes from "./routes/cups.js";
 import draftRoutes from "./routes/draft.js";
@@ -27,6 +28,7 @@ export async function buildServer() {
   await fastify.register(authenticatePlugin);
   await fastify.register(storagePlugin);
   await fastify.register(fplSyncSchedulePlugin);
+  await fastify.register(reminderSchedulePlugin);
 
   await fastify.register(healthRoutes);
   await fastify.register(leagueRoutes);

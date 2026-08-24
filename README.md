@@ -34,6 +34,11 @@ env files based on the `.env.example` in each app:
   and `EXPO_PUBLIC_API_URL` (a physical phone on the same Wi-Fi needs your
   machine's LAN IP instead of `127.0.0.1` for both URLs)
 
+The API also requires `RESEND_API_KEY` (used to send gameweek deadline
+reminder emails — see `apps/api/.env.example`) to boot at all; sign up at
+[resend.com](https://resend.com) and create a key (its default test key
+works fine for local dev, sending only to your own account email).
+
 Then push the app's database schema (tables) into that local Postgres:
 
 ```bash

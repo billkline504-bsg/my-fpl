@@ -7,6 +7,25 @@ this file existed (the original 8 build phases, automated gameweek
 finalization, and cup competitions) is narrated in
 [docs/plan.md](docs/plan.md) instead — this file picks up from there.
 
+## 2026-08-24 — Gameweek deadline reminder emails
+
+- Managers now get two reminder emails per gameweek before its deadline
+  locks scoring: one `REMINDER_DAYS_BEFORE` days out (default 1) and one
+  `REMINDER_HOURS_BEFORE` hours out (default 2), sent to every member of
+  each league on that gameweek's season. Since the app auto-computes
+  each manager's best 11 from their squad, the email is a general
+  "make any transfers now" nudge rather than a lineup-submission
+  reminder.
+- New `apps/api/src/domain/reminders.ts` (`runGameweekReminders`),
+  wired into a 15-minute cron (`apps/api/src/plugins/reminderSchedule.ts`,
+  same `node-cron` pattern as the FPL sync schedule). A new
+  `gameweek_reminders` table records which (gameweek, reminder type)
+  pairs have already been sent so the cron never double-sends.
+- Sends via [Resend](https://resend.com) (`apps/api/src/lib/resend.ts`,
+  new `resend` dependency) — requires a `RESEND_API_KEY` env var (see
+  `.env.example`); no email-sending infra existed in the repo before
+  this.
+
 ## 2026-08-24 — Fix stale icons after re-upload
 
 - Icon uploads (`uploadIconFile` in `apps/api/src/domain/icons.ts`) now

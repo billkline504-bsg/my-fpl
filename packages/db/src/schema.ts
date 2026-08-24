@@ -17,6 +17,7 @@ import {
 const authSchema = pgSchema("auth");
 export const authUsers = authSchema.table("users", {
   id: uuid("id").primaryKey(),
+  email: text("email"),
 });
 
 export const positionEnum = pgEnum("position", ["GK", "DEF", "MID", "FWD"]);
@@ -304,6 +305,21 @@ export const cupEntrants = pgTable(
     eliminatedAt: timestamp("eliminated_at", { withTimezone: true }),
   },
   (t) => [unique().on(t.cupEventId, t.userId)],
+);
+
+export const reminderTypeEnum = pgEnum("reminder_type", ["days_before", "hours_before"]);
+
+export const gameweekReminders = pgTable(
+  "gameweek_reminders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gameweekId: uuid("gameweek_id")
+      .notNull()
+      .references(() => gameweeks.id, { onDelete: "cascade" }),
+    type: reminderTypeEnum("type").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.gameweekId, t.type)],
 );
 
 export const cupMatchups = pgTable("cup_matchups", {
