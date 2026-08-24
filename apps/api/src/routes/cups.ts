@@ -3,12 +3,14 @@ import { z } from "zod";
 import {
   createCupEvent,
   listCupsForLeague,
+  setCupIcon,
   CupAlreadyActiveError,
   CupNotFoundError,
   NotCommissionerError,
   NotEnoughEntrantsError,
   StartingGameweekNotFoundError,
 } from "../domain/cups.js";
+import { InvalidIconFileError } from "../domain/icons.js";
 
 const createCupSchema = z.object({
   name: z.string().min(1).max(100),
@@ -23,6 +25,7 @@ function sendCupError(reply: FastifyReply, err: unknown) {
   if (err instanceof NotEnoughEntrantsError) return reply.code(409).send({ error: err.message });
   if (err instanceof StartingGameweekNotFoundError) return reply.code(404).send({ error: err.message });
   if (err instanceof CupNotFoundError) return reply.code(404).send({ error: err.message });
+  if (err instanceof InvalidIconFileError) return reply.code(400).send({ error: err.message });
   throw err;
 }
 
@@ -46,4 +49,25 @@ export default async function cupRoutes(fastify: FastifyInstance) {
       return sendCupError(reply, err);
     }
   });
+
+  fastify.post<{ Params: { leagueId: string; cupEventId: string } }>(
+    "/leagues/:leagueId/cups/:cupEventId/icon",
+    async (request, reply) => {
+      const file = await request.file();
+      if (!file) return reply.code(400).send({ error: "No file uploaded" });
+      const buffer = await file.toBuffer();
+      try {
+        const cup = await setCupIcon(fastify.db, fastify.storage, {
+          leagueId: request.params.leagueId,
+          cupEventId: request.params.cupEventId,
+          requestedByUserId: request.user!.id,
+          buffer,
+          mimeType: file.mimetype,
+        });
+        return cup;
+      } catch (err) {
+        return sendCupError(reply, err);
+      }
+    },
+  );
 }

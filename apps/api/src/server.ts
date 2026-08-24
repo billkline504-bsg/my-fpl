@@ -1,8 +1,11 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
+import { MAX_ICON_SIZE_BYTES } from "@my-fpl/shared";
 import authenticatePlugin from "./plugins/authenticate.js";
 import dbPlugin from "./plugins/db.js";
 import fplSyncSchedulePlugin from "./plugins/fplSyncSchedule.js";
+import storagePlugin from "./plugins/storage.js";
 import cupRoutes from "./routes/cups.js";
 import draftRoutes from "./routes/draft.js";
 import fplSyncRoutes from "./routes/fplSync.js";
@@ -19,8 +22,10 @@ export async function buildServer() {
   const fastify = Fastify({ logger: true });
 
   await fastify.register(cors, { origin: true });
+  await fastify.register(multipart, { limits: { fileSize: MAX_ICON_SIZE_BYTES } });
   await fastify.register(dbPlugin);
   await fastify.register(authenticatePlugin);
+  await fastify.register(storagePlugin);
   await fastify.register(fplSyncSchedulePlugin);
 
   await fastify.register(healthRoutes);

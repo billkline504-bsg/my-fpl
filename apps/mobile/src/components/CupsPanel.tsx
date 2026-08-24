@@ -4,8 +4,21 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { api, getRecommendedCupRounds, type CupEvent, type CupFormat, type League } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 import { ui } from "../lib/ui";
+import { Icon, IconUpload } from "./IconUpload";
 
-function CupBracket({ cup, displayName }: { cup: CupEvent; displayName: (userId: string) => string }) {
+function CupBracket({
+  cup,
+  displayName,
+  isCommissioner,
+  onUploadIcon,
+  uploadingIconCupId,
+}: {
+  cup: CupEvent;
+  displayName: (userId: string) => string;
+  isCommissioner: boolean;
+  onUploadIcon: (cupId: string, formData: FormData) => void;
+  uploadingIconCupId: string | null;
+}) {
   const rounds = new Map<number, typeof cup.matchups>();
   for (const m of cup.matchups) {
     const existing = rounds.get(m.roundNumber);
@@ -16,9 +29,20 @@ function CupBracket({ cup, displayName }: { cup: CupEvent; displayName: (userId:
   return (
     <View style={ui.card}>
       <View style={ui.row}>
-        <Text style={ui.h2}>
-          {cup.name} <Text style={ui.subtext}>({cup.format} elimination)</Text>
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {isCommissioner ? (
+            <IconUpload
+              iconUrl={cup.iconUrl}
+              busy={uploadingIconCupId === cup.id}
+              onUpload={(formData) => onUploadIcon(cup.id, formData)}
+            />
+          ) : (
+            <Icon iconUrl={cup.iconUrl} />
+          )}
+          <Text style={ui.h2}>
+            {cup.name} <Text style={ui.subtext}>({cup.format} elimination)</Text>
+          </Text>
+        </View>
         <Text style={cup.status === "completed" ? ui.successText : ui.subtext}>
           {cup.status === "completed"
             ? `Champion${cup.champions.length > 1 ? "s" : ""}: ${cup.champions.map(displayName).join(", ")}`
@@ -77,6 +101,14 @@ export function CupsPanel({ league }: { league: League }) {
 
   const hasActiveCup = cupsQuery.data?.some((c) => c.status === "in_progress") ?? false;
   const recommendedRounds = getRecommendedCupRounds(format, membersQuery.data?.length ?? 0);
+
+  const [uploadingIconCupId, setUploadingIconCupId] = useState<string | null>(null);
+  const uploadCupIconMutation = useMutation({
+    mutationFn: ({ cupId, formData }: { cupId: string; formData: FormData }) => api.uploadCupIcon(league.id, cupId, formData),
+    onMutate: ({ cupId }) => setUploadingIconCupId(cupId),
+    onSettled: () => setUploadingIconCupId(null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cups", league.id] }),
+  });
 
   const createCupMutation = useMutation({
     mutationFn: () =>
@@ -152,7 +184,16 @@ export function CupsPanel({ league }: { league: League }) {
         </Text>
       )}
       {cupsQuery.data?.length === 0 && <Text style={ui.subtext}>No cup competitions yet.</Text>}
-      {cupsQuery.data?.map((cup) => <CupBracket key={cup.id} cup={cup} displayName={displayName} />)}
+      {cupsQuery.data?.map((cup) => (
+        <CupBracket
+          key={cup.id}
+          cup={cup}
+          displayName={displayName}
+          isCommissioner={isCommissioner}
+          onUploadIcon={(cupId, formData) => uploadCupIconMutation.mutate({ cupId, formData })}
+          uploadingIconCupId={uploadingIconCupId}
+        />
+      ))}
     </ScrollView>
   );
 }

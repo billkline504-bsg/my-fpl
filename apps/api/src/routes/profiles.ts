@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getProfile, upsertProfile } from "../domain/profiles.js";
+import { getProfile, setMyIcon, upsertProfile } from "../domain/profiles.js";
+import { InvalidIconFileError } from "../domain/icons.js";
 
 const upsertProfileSchema = z.object({
   displayName: z.string().min(1).max(50),
-  avatarUrl: z.string().url().optional(),
 });
 
 export default async function profileRoutes(fastify: FastifyInstance) {
@@ -19,5 +19,21 @@ export default async function profileRoutes(fastify: FastifyInstance) {
   fastify.put("/profiles/me", async (request) => {
     const body = upsertProfileSchema.parse(request.body);
     return upsertProfile(fastify.db, { id: request.user!.id, ...body });
+  });
+
+  fastify.post("/profiles/me/icon", async (request, reply) => {
+    const file = await request.file();
+    if (!file) return reply.code(400).send({ error: "No file uploaded" });
+    const buffer = await file.toBuffer();
+    try {
+      return await setMyIcon(fastify.db, fastify.storage, {
+        userId: request.user!.id,
+        buffer,
+        mimeType: file.mimetype,
+      });
+    } catch (err) {
+      if (err instanceof InvalidIconFileError) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
   });
 }

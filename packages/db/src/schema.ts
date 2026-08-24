@@ -29,7 +29,7 @@ export const profiles = pgTable("profiles", {
     .primaryKey()
     .references(() => authUsers.id, { onDelete: "cascade" }),
   displayName: text("display_name").notNull(),
-  avatarUrl: text("avatar_url"),
+  iconUrl: text("icon_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -105,6 +105,7 @@ export const leagues = pgTable("leagues", {
     .references(() => seasons.id),
   maxUsers: integer("max_users").notNull().default(8),
   inviteCode: text("invite_code").notNull().unique(),
+  iconUrl: text("icon_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -284,6 +285,7 @@ export const cupEvents = pgTable("cup_events", {
   startingGameweekNumber: integer("starting_gameweek_number").notNull(),
   configuredRounds: integer("configured_rounds").notNull(),
   status: cupStatusEnum("status").notNull().default("in_progress"),
+  iconUrl: text("icon_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });

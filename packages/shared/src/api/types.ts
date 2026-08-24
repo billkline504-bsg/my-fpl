@@ -9,6 +9,7 @@ export interface League {
   seasonLabel: string;
   maxUsers: number;
   inviteCode: string;
+  iconUrl: string | null;
   createdAt: string;
 }
 
@@ -22,14 +23,14 @@ export interface Season {
 export interface LeagueMember {
   userId: string;
   displayName: string;
-  avatarUrl: string | null;
+  iconUrl: string | null;
   joinedAt: string;
 }
 
 export interface Profile {
   id: string;
   displayName: string;
-  avatarUrl: string | null;
+  iconUrl: string | null;
 }
 
 export interface Player {
@@ -173,6 +174,7 @@ export interface CupEvent {
   startingGameweekNumber: number;
   configuredRounds: number;
   status: CupStatus;
+  iconUrl: string | null;
   createdAt: string;
   completedAt: string | null;
   entrants: CupEntrant[];

@@ -2,8 +2,21 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getRecommendedCupRounds, type CupEvent, type CupFormat, type League } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
+import { Icon, IconUpload } from "./IconUpload";
 
-function CupBracket({ cup, displayName }: { cup: CupEvent; displayName: (userId: string) => string }) {
+function CupBracket({
+  cup,
+  displayName,
+  isCommissioner,
+  onUploadIcon,
+  uploadingIconCupId,
+}: {
+  cup: CupEvent;
+  displayName: (userId: string) => string;
+  isCommissioner: boolean;
+  onUploadIcon: (cupId: string, file: File) => void;
+  uploadingIconCupId: string | null;
+}) {
   const rounds = new Map<number, typeof cup.matchups>();
   for (const m of cup.matchups) {
     const existing = rounds.get(m.roundNumber);
@@ -14,9 +27,21 @@ function CupBracket({ cup, displayName }: { cup: CupEvent; displayName: (userId:
   return (
     <div className="space-y-3 rounded-lg border border-slate-200 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-slate-700">
-          {cup.name} <span className="text-xs text-slate-500">({cup.format} elimination)</span>
-        </h3>
+        <div className="flex items-center gap-2">
+          {isCommissioner ? (
+            <IconUpload
+              iconUrl={cup.iconUrl}
+              alt={`${cup.name} icon`}
+              busy={uploadingIconCupId === cup.id}
+              onUpload={(file) => onUploadIcon(cup.id, file)}
+            />
+          ) : (
+            <Icon iconUrl={cup.iconUrl} alt={`${cup.name} icon`} />
+          )}
+          <h3 className="text-sm font-medium text-slate-700">
+            {cup.name} <span className="text-xs text-slate-500">({cup.format} elimination)</span>
+          </h3>
+        </div>
         <span className={`text-xs font-medium ${cup.status === "completed" ? "text-green-700" : "text-slate-500"}`}>
           {cup.status === "completed"
             ? `Champion${cup.champions.length > 1 ? "s" : ""}: ${cup.champions.map(displayName).join(", ")}`
@@ -77,6 +102,18 @@ export function CupsPanel({ league }: { league: League }) {
 
   const hasActiveCup = cupsQuery.data?.some((c) => c.status === "in_progress") ?? false;
   const recommendedRounds = getRecommendedCupRounds(format, membersQuery.data?.length ?? 0);
+
+  const [uploadingIconCupId, setUploadingIconCupId] = useState<string | null>(null);
+  const uploadCupIconMutation = useMutation({
+    mutationFn: ({ cupId, file }: { cupId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return api.uploadCupIcon(league.id, cupId, formData);
+    },
+    onMutate: ({ cupId }) => setUploadingIconCupId(cupId),
+    onSettled: () => setUploadingIconCupId(null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cups", league.id] }),
+  });
 
   const createCupMutation = useMutation({
     mutationFn: () =>
@@ -182,7 +219,16 @@ export function CupsPanel({ league }: { league: League }) {
       {cupsQuery.data?.length === 0 && (
         <p className="text-sm text-slate-500">No cup competitions yet.</p>
       )}
-      {cupsQuery.data?.map((cup) => <CupBracket key={cup.id} cup={cup} displayName={displayName} />)}
+      {cupsQuery.data?.map((cup) => (
+        <CupBracket
+          key={cup.id}
+          cup={cup}
+          displayName={displayName}
+          isCommissioner={isCommissioner}
+          onUploadIcon={(cupId, file) => uploadCupIconMutation.mutate({ cupId, file })}
+          uploadingIconCupId={uploadingIconCupId}
+        />
+      ))}
     </div>
   );
 }

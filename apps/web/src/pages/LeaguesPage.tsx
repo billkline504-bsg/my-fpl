@@ -7,6 +7,7 @@ import { RosterPanel } from "../components/RosterPanel";
 import { StandingsPanel } from "../components/StandingsPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { CupsPanel } from "../components/CupsPanel";
+import { Icon, IconUpload } from "../components/IconUpload";
 
 type DetailTab = "members" | "draft" | "roster" | "standings" | "history" | "cups";
 
@@ -25,6 +26,32 @@ export function LeaguesPage() {
     queryKey: ["league-members", selectedLeague?.id],
     queryFn: () => api.getLeagueMembers(selectedLeague!.id),
     enabled: !!selectedLeague,
+  });
+
+  const myProfileQuery = useQuery({ queryKey: ["my-profile"], queryFn: api.getMyProfile });
+
+  const uploadMyIconMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return api.uploadMyIcon(formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["league-members"] });
+    },
+  });
+
+  const uploadLeagueIconMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return api.uploadLeagueIcon(selectedLeague!.id, formData);
+    },
+    onSuccess: (updated) => {
+      setSelectedLeague(updated);
+      queryClient.invalidateQueries({ queryKey: ["leagues"] });
+    },
   });
 
   const createLeagueMutation = useMutation({
@@ -52,6 +79,12 @@ export function LeaguesPage() {
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">My Leagues</h1>
         <div className="flex items-center gap-3">
+          <IconUpload
+            iconUrl={myProfileQuery.data?.iconUrl ?? null}
+            alt="Your team icon"
+            busy={uploadMyIconMutation.isPending}
+            onUpload={(file) => uploadMyIconMutation.mutate(file)}
+          />
           <span className="text-sm text-slate-500">{user?.email}</span>
           <button className="text-sm text-slate-500 underline" onClick={() => signOut()}>
             Sign out
@@ -124,12 +157,15 @@ export function LeaguesPage() {
         <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200">
           {leaguesQuery.data?.map((league) => (
             <li key={league.id} className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-medium text-slate-900">{league.name}</p>
-                <p className="text-xs text-slate-500">
-                  Invite code: <span className="font-mono">{league.inviteCode}</span> · max {league.maxUsers} users ·{" "}
-                  {league.seasonLabel}
-                </p>
+              <div className="flex items-center gap-3">
+                <Icon iconUrl={league.iconUrl} alt={`${league.name} icon`} />
+                <div>
+                  <p className="font-medium text-slate-900">{league.name}</p>
+                  <p className="text-xs text-slate-500">
+                    Invite code: <span className="font-mono">{league.inviteCode}</span> · max {league.maxUsers} users
+                    · {league.seasonLabel}
+                  </p>
+                </div>
               </div>
               <button
                 className="text-sm text-slate-600 underline"
@@ -148,7 +184,19 @@ export function LeaguesPage() {
       {selectedLeague && (
         <section className="space-y-3 rounded-lg border border-slate-200 p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-slate-700">{selectedLeague.name}</h2>
+            <div className="flex items-center gap-2">
+              {user?.id === selectedLeague.commissionerId ? (
+                <IconUpload
+                  iconUrl={selectedLeague.iconUrl}
+                  alt={`${selectedLeague.name} icon`}
+                  busy={uploadLeagueIconMutation.isPending}
+                  onUpload={(file) => uploadLeagueIconMutation.mutate(file)}
+                />
+              ) : (
+                <Icon iconUrl={selectedLeague.iconUrl} alt={`${selectedLeague.name} icon`} />
+              )}
+              <h2 className="text-sm font-medium text-slate-700">{selectedLeague.name}</h2>
+            </div>
             <button className="text-xs text-slate-500 underline" onClick={() => setSelectedLeague(null)}>
               Close
             </button>
@@ -173,7 +221,8 @@ export function LeaguesPage() {
               {membersQuery.isLoading && <p className="text-sm text-slate-500">Loading members...</p>}
               <ul className="space-y-1">
                 {membersQuery.data?.map((member) => (
-                  <li key={member.userId} className="text-sm text-slate-800">
+                  <li key={member.userId} className="flex items-center gap-2 text-sm text-slate-800">
+                    <Icon iconUrl={member.iconUrl} alt={`${member.displayName} icon`} size={20} />
                     {member.displayName}
                   </li>
                 ))}

@@ -54,6 +54,25 @@ export function createApiClient(config: ApiClientConfig) {
     return response.json() as Promise<T>;
   }
 
+  async function uploadFile<T>(path: string, formData: FormData): Promise<T> {
+    const accessToken = await config.getAccessToken();
+
+    const response = await fetch(`${config.apiUrl}${path}`, {
+      method: "POST",
+      body: formData,
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? `Request to ${path} failed with ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
   return {
     listMyLeagues: () => request<League[]>("/leagues"),
     createLeague: (input: { name: string; seasonId?: string }) =>
@@ -61,8 +80,12 @@ export function createApiClient(config: ApiClientConfig) {
     joinLeague: (inviteCode: string) =>
       request<League>("/leagues/join", { method: "POST", body: JSON.stringify({ inviteCode }) }),
     getLeagueMembers: (leagueId: string) => request<LeagueMember[]>(`/leagues/${leagueId}/members`),
+    getMyProfile: () => request<Profile>("/profiles/me"),
     upsertMyProfile: (input: { displayName: string }) =>
       request<Profile>("/profiles/me", { method: "PUT", body: JSON.stringify(input) }),
+    uploadMyIcon: (formData: FormData) => uploadFile<Profile>("/profiles/me/icon", formData),
+    uploadLeagueIcon: (leagueId: string, formData: FormData) =>
+      uploadFile<League>(`/leagues/${leagueId}/icon`, formData),
     listPlayers: (params: { search?: string; position?: Position }) => {
       const query = new URLSearchParams();
       if (params.search) query.set("search", params.search);
@@ -113,6 +136,8 @@ export function createApiClient(config: ApiClientConfig) {
       leagueId: string,
       input: { name: string; format: CupFormat; startingGameweekNumber: number; configuredRounds?: number },
     ) => request<CupEvent>(`/leagues/${leagueId}/cups`, { method: "POST", body: JSON.stringify(input) }),
+    uploadCupIcon: (leagueId: string, cupEventId: string, formData: FormData) =>
+      uploadFile<CupEvent>(`/leagues/${leagueId}/cups/${cupEventId}/icon`, formData),
   };
 }
 

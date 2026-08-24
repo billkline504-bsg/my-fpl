@@ -1,6 +1,9 @@
 import { customAlphabet } from "nanoid";
 import { eq, and, count } from "drizzle-orm";
 import { leagues, leagueMemberships, profiles, seasons, type Db } from "@my-fpl/db";
+import { uploadIconFile } from "./icons.js";
+import { NotCommissionerError } from "./seasons.js";
+import type { Storage } from "../plugins/storage.js";
 
 const generateInviteCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6);
 
@@ -82,6 +85,7 @@ export async function listMyLeagues(db: Db, userId: string) {
       seasonLabel: seasons.label,
       maxUsers: leagues.maxUsers,
       inviteCode: leagues.inviteCode,
+      iconUrl: leagues.iconUrl,
       createdAt: leagues.createdAt,
     })
     .from(leagueMemberships)
@@ -95,10 +99,36 @@ export async function getLeagueMembers(db: Db, leagueId: string) {
     .select({
       userId: profiles.id,
       displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
+      iconUrl: profiles.iconUrl,
       joinedAt: leagueMemberships.joinedAt,
     })
     .from(leagueMemberships)
     .innerJoin(profiles, eq(leagueMemberships.userId, profiles.id))
     .where(eq(leagueMemberships.leagueId, leagueId));
+}
+
+export async function setLeagueIcon(
+  db: Db,
+  storage: Storage,
+  params: { leagueId: string; requestedByUserId: string; buffer: Buffer; mimeType: string },
+) {
+  const [league] = await db.select().from(leagues).where(eq(leagues.id, params.leagueId));
+  if (!league || league.commissionerId !== params.requestedByUserId) {
+    throw new NotCommissionerError("Only the league commissioner can do this");
+  }
+
+  const iconUrl = await uploadIconFile(storage, {
+    path: `leagues/${params.leagueId}`,
+    buffer: params.buffer,
+    mimeType: params.mimeType,
+  });
+
+  const [updated] = await db
+    .update(leagues)
+    .set({ iconUrl })
+    .where(eq(leagues.id, params.leagueId))
+    .returning();
+
+  const [season] = await db.select().from(seasons).where(eq(seasons.id, league.seasonId));
+  return { ...updated!, seasonLabel: season?.label ?? "Unknown season" };
 }

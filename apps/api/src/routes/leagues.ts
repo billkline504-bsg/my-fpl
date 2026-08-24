@@ -9,6 +9,7 @@ import {
   LeagueNotFoundError,
   listMyLeagues,
   ProfileRequiredError,
+  setLeagueIcon,
 } from "../domain/leagues.js";
 import {
   getOrCreateDefaultSeason,
@@ -17,6 +18,7 @@ import {
   SeasonAlreadyActiveError,
   startNextSeasonForLeague,
 } from "../domain/seasons.js";
+import { InvalidIconFileError } from "../domain/icons.js";
 
 const createLeagueSchema = z.object({
   name: z.string().min(1).max(100),
@@ -40,6 +42,7 @@ function sendDomainError(reply: FastifyReply, err: unknown) {
   if (err instanceof ProfileRequiredError) return reply.code(400).send({ error: err.message });
   if (err instanceof NotCommissionerError) return reply.code(403).send({ error: err.message });
   if (err instanceof SeasonAlreadyActiveError) return reply.code(409).send({ error: err.message });
+  if (err instanceof InvalidIconFileError) return reply.code(400).send({ error: err.message });
   throw err;
 }
 
@@ -77,6 +80,23 @@ export default async function leagueRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Params: { leagueId: string } }>("/leagues/:leagueId/members", async (request) => {
     return getLeagueMembers(fastify.db, request.params.leagueId);
+  });
+
+  fastify.post<{ Params: { leagueId: string } }>("/leagues/:leagueId/icon", async (request, reply) => {
+    const file = await request.file();
+    if (!file) return reply.code(400).send({ error: "No file uploaded" });
+    const buffer = await file.toBuffer();
+    try {
+      const league = await setLeagueIcon(fastify.db, fastify.storage, {
+        leagueId: request.params.leagueId,
+        requestedByUserId: request.user!.id,
+        buffer,
+        mimeType: file.mimetype,
+      });
+      return league;
+    } catch (err) {
+      return sendDomainError(reply, err);
+    }
   });
 
   fastify.post<{ Params: { leagueId: string } }>("/leagues/:leagueId/seasons", async (request, reply) => {

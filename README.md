@@ -137,7 +137,13 @@ config changes are needed:
    ```bash
    DATABASE_URL="<cloud-connection-string>" pnpm db:push
    ```
-3. **Update env vars** to point at the cloud project instead of localhost,
+3. **Create the `icons` storage bucket.** `supabase/config.toml`'s
+   `[storage.buckets.icons]` entry only provisions the bucket for the
+   local stack — on Supabase Cloud, create a bucket named `icons` by hand
+   (Storage → New bucket, public, 2MiB file size limit, allowed types
+   `image/png`, `image/jpeg`, `image/webp`) via the dashboard or the
+   Supabase CLI/Management API.
+4. **Update env vars** to point at the cloud project instead of localhost,
    following the same variables described in "First-time setup" above:
    - `apps/api/.env` — `DATABASE_URL` (cloud connection string),
      `SUPABASE_URL` (`https://<project-ref>.supabase.co`),
@@ -147,13 +153,13 @@ config changes are needed:
      host the API (see below).
    - `apps/mobile/.env` — the same three values with the `EXPO_PUBLIC_`
      prefix.
-4. **Host the API and web app separately** — Supabase Cloud only hosts
+5. **Host the API and web app separately** — Supabase Cloud only hosts
    Postgres/Auth/Storage, not this repo's Fastify API or Vite web app.
    `apps/api` is a plain Node/Fastify server (deployable to Fly.io, Render,
    Railway, a VPS, etc.); `apps/web` builds to static files
    (`pnpm --filter @my-fpl/web build`) deployable to any static host
    (Vercel, Netlify, Cloudflare Pages).
-5. **Know the FPL sync cron's limitation**: the scheduled sync
+6. **Know the FPL sync cron's limitation**: the scheduled sync
    ([apps/api/src/plugins/fplSyncSchedule.ts](apps/api/src/plugins/fplSyncSchedule.ts))
    runs via `node-cron` inside the API process, so it only fires while that
    process stays alive. On a host that sleeps/restarts the process (most

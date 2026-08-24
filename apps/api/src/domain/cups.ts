@@ -20,6 +20,8 @@ import {
   type Position,
 } from "@my-fpl/shared";
 import { getActiveRosterPlayers } from "./rosters.js";
+import { uploadIconFile } from "./icons.js";
+import type { Storage } from "../plugins/storage.js";
 
 export class NotCommissionerError extends Error {}
 export class CupAlreadyActiveError extends Error {}
@@ -158,6 +160,30 @@ export async function getCupDetail(db: Db, params: { leagueId: string; cupEventI
 export async function listCupsForLeague(db: Db, leagueId: string) {
   const events = await db.select().from(cupEvents).where(eq(cupEvents.leagueId, leagueId)).orderBy(desc(cupEvents.createdAt));
   return Promise.all(events.map((e) => getCupDetail(db, { leagueId, cupEventId: e.id })));
+}
+
+export async function setCupIcon(
+  db: Db,
+  storage: Storage,
+  params: { leagueId: string; cupEventId: string; requestedByUserId: string; buffer: Buffer; mimeType: string },
+) {
+  await requireCommissioner(db, params.leagueId, params.requestedByUserId);
+
+  const [cupEvent] = await db
+    .select()
+    .from(cupEvents)
+    .where(and(eq(cupEvents.id, params.cupEventId), eq(cupEvents.leagueId, params.leagueId)));
+  if (!cupEvent) throw new CupNotFoundError("Cup not found");
+
+  const iconUrl = await uploadIconFile(storage, {
+    path: `cups/${params.cupEventId}`,
+    buffer: params.buffer,
+    mimeType: params.mimeType,
+  });
+
+  await db.update(cupEvents).set({ iconUrl }).where(eq(cupEvents.id, params.cupEventId));
+
+  return getCupDetail(db, { leagueId: params.leagueId, cupEventId: params.cupEventId });
 }
 
 async function computeUserGameweekTiebreakStats(

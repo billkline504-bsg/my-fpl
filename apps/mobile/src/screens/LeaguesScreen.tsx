@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { api, type League } from "../lib/api";
 import { ui } from "../lib/ui";
+import { Icon } from "../components/IconUpload";
 import type { RootStackParamList } from "../navigation/types";
 
 export function LeaguesScreen() {
@@ -93,11 +94,14 @@ export function LeaguesScreen() {
       keyExtractor={(item: League) => item.id}
       renderItem={({ item }) => (
         <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
-          <View>
-            <Text style={ui.text}>{item.name}</Text>
-            <Text style={ui.subtext}>
-              Invite: {item.inviteCode} · max {item.maxUsers} · {item.seasonLabel}
-            </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Icon iconUrl={item.iconUrl} />
+            <View>
+              <Text style={ui.text}>{item.name}</Text>
+              <Text style={ui.subtext}>
+                Invite: {item.inviteCode} · max {item.maxUsers} · {item.seasonLabel}
+              </Text>
+            </View>
           </View>
           <Pressable style={ui.buttonSmall} onPress={() => navigation.navigate("LeagueDetail", { league: item })}>
             <Text style={ui.buttonTextSmall}>Open</Text>
