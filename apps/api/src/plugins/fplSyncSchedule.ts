@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import cron from "node-cron";
+import { autoFinalizeCupRounds } from "../domain/cups.js";
 import { syncAll } from "../domain/fplSync.js";
 import { autoFinalizeFinishedGameweeks } from "../domain/standings.js";
 
@@ -20,6 +21,15 @@ export default fp(async (fastify: FastifyInstance) => {
       }
     } catch (err) {
       fastify.log.error({ err }, "Auto-finalization failed");
+    }
+
+    try {
+      const result = await autoFinalizeCupRounds(fastify.db);
+      if (result.roundsFinalized > 0) {
+        fastify.log.info({ result }, "Auto-finalized cup rounds");
+      }
+    } catch (err) {
+      fastify.log.error({ err }, "Cup auto-finalization failed");
     }
   }
 

@@ -8,11 +8,12 @@ import { DraftPanel } from "../components/DraftPanel";
 import { RosterPanel } from "../components/RosterPanel";
 import { StandingsPanel } from "../components/StandingsPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
+import { CupsPanel } from "../components/CupsPanel";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "LeagueDetail">;
 
-type DetailTab = "members" | "draft" | "roster" | "standings" | "history";
+type DetailTab = "members" | "draft" | "roster" | "standings" | "history" | "cups";
 
 export function LeagueDetailScreen({ route, navigation }: Props) {
   const { league } = route.params;
@@ -30,7 +31,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   return (
     <View style={ui.screen}>
       <View style={ui.tabBar}>
-        {(["members", "draft", "roster", "standings", "history"] as const).map((t) => (
+        {(["members", "draft", "roster", "standings", "history", "cups"] as const).map((t) => (
           <Pressable key={t} onPress={() => setTab(t)} style={[ui.tabButton, tab === t && ui.tabButtonActive]}>
             <Text style={[ui.tabButtonText, tab === t && ui.tabButtonTextActive]}>{t}</Text>
           </Pressable>
@@ -53,8 +54,10 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
           <RosterPanel league={league} />
         ) : tab === "standings" ? (
           <StandingsPanel league={league} />
-        ) : (
+        ) : tab === "history" ? (
           <HistoryPanel league={league} onLeagueUpdated={(updated) => navigation.setParams({ league: updated })} />
+        ) : (
+          <CupsPanel league={league} />
         )}
       </View>
     </View>

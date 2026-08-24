@@ -1,5 +1,7 @@
 import type { Position } from "../types/domain.js";
+import type { CupFormat } from "../cups/types.js";
 import type {
+  CupEvent,
   DraftEvent,
   DraftType,
   FplSyncResult,
@@ -104,6 +106,11 @@ export function createApiClient(config: ApiClientConfig) {
     getLeagueHistory: (leagueId: string) => request<LeagueHistoryRow[]>(`/leagues/${leagueId}/history`),
     startNextSeason: (leagueId: string, input: { label: string; startDate: string; endDate: string }) =>
       request<League>(`/leagues/${leagueId}/seasons`, { method: "POST", body: JSON.stringify(input) }),
+    listCups: (leagueId: string) => request<CupEvent[]>(`/leagues/${leagueId}/cups`),
+    createCup: (
+      leagueId: string,
+      input: { name: string; format: CupFormat; startingGameweekNumber: number; configuredRounds?: number },
+    ) => request<CupEvent>(`/leagues/${leagueId}/cups`, { method: "POST", body: JSON.stringify(input) }),
   };
 }
 

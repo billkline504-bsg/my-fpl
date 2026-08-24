@@ -265,3 +265,62 @@ export const standings = pgTable(
   },
   (t) => [unique().on(t.leagueId, t.seasonId, t.userId)],
 );
+
+export const cupFormatEnum = pgEnum("cup_format", ["single", "double"]);
+export const cupStatusEnum = pgEnum("cup_status", ["in_progress", "completed"]);
+
+export const cupEvents = pgTable("cup_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  leagueId: uuid("league_id")
+    .notNull()
+    .references(() => leagues.id, { onDelete: "cascade" }),
+  seasonId: uuid("season_id")
+    .notNull()
+    .references(() => seasons.id),
+  name: text("name").notNull(),
+  format: cupFormatEnum("format").notNull(),
+  // A round always maps onto exactly one real gameweek; round N's gameweek
+  // number is startingGameweekNumber + N - 1.
+  startingGameweekNumber: integer("starting_gameweek_number").notNull(),
+  configuredRounds: integer("configured_rounds").notNull(),
+  status: cupStatusEnum("status").notNull().default("in_progress"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const cupEntrants = pgTable(
+  "cup_entrants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cupEventId: uuid("cup_event_id")
+      .notNull()
+      .references(() => cupEvents.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id),
+    losses: integer("losses").notNull().default(0),
+    eliminatedAt: timestamp("eliminated_at", { withTimezone: true }),
+  },
+  (t) => [unique().on(t.cupEventId, t.userId)],
+);
+
+export const cupMatchups = pgTable("cup_matchups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  cupEventId: uuid("cup_event_id")
+    .notNull()
+    .references(() => cupEvents.id, { onDelete: "cascade" }),
+  roundNumber: integer("round_number").notNull(),
+  gameweekId: uuid("gameweek_id")
+    .notNull()
+    .references(() => gameweeks.id),
+  userAId: uuid("user_a_id")
+    .notNull()
+    .references(() => profiles.id),
+  // null means userAId drew a bye this round — no opponent, auto-advances.
+  userBId: uuid("user_b_id").references(() => profiles.id),
+  userAScore: integer("user_a_score"),
+  userBScore: integer("user_b_score"),
+  winnerId: uuid("winner_id").references(() => profiles.id),
+  isBye: boolean("is_bye").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

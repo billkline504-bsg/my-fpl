@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import authenticatePlugin from "./plugins/authenticate.js";
 import dbPlugin from "./plugins/db.js";
 import fplSyncSchedulePlugin from "./plugins/fplSyncSchedule.js";
+import cupRoutes from "./routes/cups.js";
 import draftRoutes from "./routes/draft.js";
 import fplSyncRoutes from "./routes/fplSync.js";
 import healthRoutes from "./routes/health.js";
@@ -32,6 +33,7 @@ export async function buildServer() {
   await fastify.register(rosterRoutes);
   await fastify.register(standingsRoutes);
   await fastify.register(transferRoutes);
+  await fastify.register(cupRoutes);
 
   return fastify;
 }

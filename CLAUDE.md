@@ -81,6 +81,18 @@ Local Supabase (Postgres + Auth) runs via the Supabase CLI in Docker.
   (`createRemoteJWKSet` in `apps/api/src/plugins/authenticate.ts`), not a
   shared secret — this is what makes the local→Supabase Cloud migration
   (see README) config-only with no code changes.
+- **Cup competitions** (`apps/api/src/domain/cups.ts`) are a separate
+  knockout bracket alongside the round-robin league, one round per
+  gameweek, pairing redrawn randomly each round (not a fixed bracket
+  tree) — see the "Post-plan work" section of
+  [docs/plan.md](docs/plan.md) for the full design. `autoFinalizeCupRounds`
+  advances rounds the same way league gameweeks auto-finalize; it loops
+  per cup (not just one round per sync pass) so it can catch up if
+  multiple rounds' gameweeks finished while the API was offline. Its
+  tiebreak cascade (top-11 → total squad points → total goals → goals by
+  position → clean sheets → random) lives as a pure, unit-tested function
+  in `packages/shared/src/cups/tiebreak.ts` — extend it there, not inline
+  in the domain function, if the tiebreak rules ever change.
 
 ## Known environment gotchas (this machine specifically)
 

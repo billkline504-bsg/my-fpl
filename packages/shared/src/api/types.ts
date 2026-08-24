@@ -1,4 +1,5 @@
 import type { Position } from "../types/domain.js";
+import type { CupFormat, CupStatus } from "../cups/types.js";
 
 export interface League {
   id: string;
@@ -39,6 +40,7 @@ export interface FplSyncResult {
   gameweeks: number;
   stats: { gameweekNumber: number; playersUpdated: number } | null;
   finalized: { gameweeksFinalized: number; matchupsFinalized: number };
+  cupsFinalized: { roundsFinalized: number; matchupsFinalized: number };
 }
 
 export type DraftType = "initial" | "post_transfer";
@@ -135,4 +137,38 @@ export interface LeagueHistoryRow {
   losses: number;
   points: number;
   totalPointsScored: number;
+}
+
+export interface CupEntrant {
+  userId: string;
+  losses: number;
+  eliminatedAt: string | null;
+}
+
+export interface CupMatchup {
+  id: string;
+  roundNumber: number;
+  gameweekNumber: number;
+  userAId: string;
+  userBId: string | null;
+  userAScore: number | null;
+  userBScore: number | null;
+  winnerId: string | null;
+  isBye: boolean;
+}
+
+export interface CupEvent {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  name: string;
+  format: CupFormat;
+  startingGameweekNumber: number;
+  configuredRounds: number;
+  status: CupStatus;
+  createdAt: string;
+  completedAt: string | null;
+  entrants: CupEntrant[];
+  matchups: CupMatchup[];
+  champions: string[];
 }

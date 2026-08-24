@@ -195,6 +195,27 @@ to the *future* season instead of the one actually being played. It now
 picks whichever season's date range contains today, falling back to the
 latest-start-date season only if none matches (e.g. no seasons exist yet).
 
+### Post-plan work: cup competitions
+
+Also beyond the original 8 phases: a separate knockout competition
+alongside the round-robin league — `cup_events`/`cup_entrants`/
+`cup_matchups` in [packages/db/src/schema.ts](../packages/db/src/schema.ts),
+domain logic in
+[apps/api/src/domain/cups.ts](../apps/api/src/domain/cups.ts). Commissioner
+configures a name, single/double elimination, a starting gameweek, and a
+round count (defaulting to a recommended value — `ceil(log2(entrants))`
+for single elimination, exact; `+1` for double elimination, a heuristic
+since pairing is random each round rather than a fixed bracket). All
+league members enter automatically; pairing is redrawn randomly every
+round (bye for an odd survivor count); double elimination here just means
+a 2nd-loss threshold rather than a true separate winners/losers bracket.
+Tiebreak cascade: top-11 score → total squad points → total goals →
+goals by position (FWD→MID→DEF→GK) → clean sheets → random. Rounds
+auto-advance via `autoFinalizeCupRounds`, wired into the same sync flow
+as league gameweek finalization. If the configured rounds run out before
+the field is down to one entrant, whoever's left are co-champions rather
+than the cup blocking indefinitely.
+
 ## Verification
 
 - `docker` running locally; `supabase start` boots Postgres/Auth/Studio

@@ -95,6 +95,17 @@ like this:
    once a season ends, to start a fresh draft/roster/standings cycle for
    the same league while keeping every prior season's results visible in
    its history table.
+8. **Run a cup competition** on the Cups tab (commissioner only, optional)
+   — separate from the league's round-robin standings, a cup is a
+   single- or double-elimination knockout among every league member, one
+   round per gameweek, with random pairings (and a bye for an odd
+   survivor count) redrawn each round. Ties are broken by: top-11 score →
+   total squad points → total goals → goals by position (forwards through
+   goalkeepers) → clean sheets → a coin flip as the last resort. Rounds
+   advance automatically the same way gameweeks finalize — no manual step
+   needed once it's started. Only one cup can be active per league at a
+   time; run a few across a season (e.g. a fall cup, then a spring cup)
+   by starting a new one once the previous completes.
 
 ### Useful commands
 

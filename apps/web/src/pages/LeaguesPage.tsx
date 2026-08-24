@@ -6,8 +6,9 @@ import { DraftPanel } from "../components/DraftPanel";
 import { RosterPanel } from "../components/RosterPanel";
 import { StandingsPanel } from "../components/StandingsPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
+import { CupsPanel } from "../components/CupsPanel";
 
-type DetailTab = "members" | "draft" | "roster" | "standings" | "history";
+type DetailTab = "members" | "draft" | "roster" | "standings" | "history" | "cups";
 
 export function LeaguesPage() {
   const { signOut, user } = useAuth();
@@ -154,7 +155,7 @@ export function LeaguesPage() {
           </div>
 
           <div className="flex gap-4 border-b border-slate-200">
-            {(["members", "draft", "roster", "standings", "history"] as const).map((t) => (
+            {(["members", "draft", "roster", "standings", "history", "cups"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setDetailTab(t)}
@@ -184,8 +185,10 @@ export function LeaguesPage() {
             <RosterPanel league={selectedLeague} />
           ) : detailTab === "standings" ? (
             <StandingsPanel league={selectedLeague} />
-          ) : (
+          ) : detailTab === "history" ? (
             <HistoryPanel league={selectedLeague} onLeagueUpdated={setSelectedLeague} />
+          ) : (
+            <CupsPanel league={selectedLeague} />
           )}
         </section>
       )}

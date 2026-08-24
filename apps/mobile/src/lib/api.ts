@@ -13,6 +13,11 @@ export const api = createApiClient({
 });
 
 export type {
+  CupEntrant,
+  CupEvent,
+  CupFormat,
+  CupMatchup,
+  CupStatus,
   DraftEvent,
   DraftPick,
   DraftStatus,
@@ -30,3 +35,4 @@ export type {
   StandingRow,
   TransferWindow,
 } from "@my-fpl/shared";
+export { getRecommendedCupRounds } from "@my-fpl/shared";
