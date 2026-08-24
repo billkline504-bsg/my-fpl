@@ -110,7 +110,14 @@ export async function runGameweekReminders(
       emailsFailed += result.failed;
       gameweeksReminded++;
 
-      await db.insert(gameweekReminders).values({ gameweekId: gameweek.id, type });
+      // A total failure (e.g. the email provider is down) shouldn't be
+      // recorded as sent — leave it unmarked so the next tick retries.
+      // Partial failures and the zero-recipients case are recorded as
+      // done, so successful recipients aren't re-emailed on every tick.
+      const totalFailure = result.sent === 0 && result.failed > 0;
+      if (!totalFailure) {
+        await db.insert(gameweekReminders).values({ gameweekId: gameweek.id, type });
+      }
     }
   }
 
