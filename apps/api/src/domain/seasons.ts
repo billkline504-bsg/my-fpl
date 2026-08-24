@@ -5,13 +5,20 @@ export class NotCommissionerError extends Error {}
 export class SeasonAlreadyActiveError extends Error {}
 
 /**
- * Phase 2 (FPL sync) will populate real seasons from the FPL API. Until
- * then, league creation needs *some* season to attach to, so we lazily
- * create a single placeholder season on first use.
+ * The season FPL sync should attach data to, and the season a brand-new
+ * league defaults to: whichever season's date range actually contains
+ * today, not just "whichever season row has the latest start date" — once
+ * a league rolls onto a future season (see `startNextSeasonForLeague`),
+ * the latter would start misattributing live FPL sync data to that future
+ * season instead of the one currently being played.
  */
 export async function getOrCreateDefaultSeason(db: Db) {
-  const [existing] = await db.select().from(seasons).orderBy(desc(seasons.startDate)).limit(1);
-  if (existing) return existing;
+  const allSeasons = await db.select().from(seasons).orderBy(desc(seasons.startDate));
+  if (allSeasons.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const current = allSeasons.find((s) => s.startDate <= today && today <= s.endDate);
+    return current ?? allSeasons[0]!;
+  }
 
   const [created] = await db
     .insert(seasons)

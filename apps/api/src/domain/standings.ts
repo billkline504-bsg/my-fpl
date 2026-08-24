@@ -1,7 +1,10 @@
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, or, isNull } from "drizzle-orm";
 import { gameweeks, leagueMemberships, leagues, matchups, playerGameweekStats, profiles, standings, type Db } from "@my-fpl/db";
 import { computeTopEleven, generateRoundRobin, MATCH_POINTS, type PlayerGameweekScore } from "@my-fpl/shared";
 import { getActiveRosterPlayers } from "./rosters.js";
+import { syncGameweekStats } from "./fplSync.js";
+
+type Gameweek = typeof gameweeks.$inferSelect;
 
 export class NotCommissionerError extends Error {}
 export class ScheduleAlreadyExistsError extends Error {}
@@ -98,6 +101,40 @@ export async function computeUserGameweekScore(
   return computeTopEleven(scored).totalPoints;
 }
 
+async function finalizeGameweekForLeague(
+  db: Db,
+  params: { leagueId: string; seasonId: string; gameweek: Gameweek },
+) {
+  const gameweekMatchups = await db
+    .select()
+    .from(matchups)
+    .where(and(eq(matchups.leagueId, params.leagueId), eq(matchups.gameweekId, params.gameweek.id)));
+
+  for (const matchup of gameweekMatchups) {
+    const [userAScore, userBScore] = await Promise.all([
+      computeUserGameweekScore(db, {
+        leagueId: params.leagueId,
+        userId: matchup.userAId,
+        seasonId: params.seasonId,
+        gameweekId: params.gameweek.id,
+      }),
+      computeUserGameweekScore(db, {
+        leagueId: params.leagueId,
+        userId: matchup.userBId,
+        seasonId: params.seasonId,
+        gameweekId: params.gameweek.id,
+      }),
+    ]);
+    const winnerId = userAScore === userBScore ? null : userAScore > userBScore ? matchup.userAId : matchup.userBId;
+
+    await db.update(matchups).set({ userAScore, userBScore, winnerId }).where(eq(matchups.id, matchup.id));
+  }
+
+  await recalculateStandings(db, { leagueId: params.leagueId, seasonId: params.seasonId });
+
+  return { gameweekNumber: params.gameweek.number, matchupsFinalized: gameweekMatchups.length };
+}
+
 export async function finalizeGameweek(
   db: Db,
   params: { leagueId: string; requestedByUserId: string; gameweekNumber: number },
@@ -110,34 +147,45 @@ export async function finalizeGameweek(
     .where(and(eq(gameweeks.seasonId, league.seasonId), eq(gameweeks.number, params.gameweekNumber)));
   if (!gameweek) throw new GameweekNotFoundError(`Gameweek ${params.gameweekNumber} not found`);
 
-  const gameweekMatchups = await db
-    .select()
-    .from(matchups)
-    .where(and(eq(matchups.leagueId, params.leagueId), eq(matchups.gameweekId, gameweek.id)));
+  return finalizeGameweekForLeague(db, { leagueId: params.leagueId, seasonId: league.seasonId, gameweek });
+}
 
-  for (const matchup of gameweekMatchups) {
-    const [userAScore, userBScore] = await Promise.all([
-      computeUserGameweekScore(db, {
-        leagueId: params.leagueId,
-        userId: matchup.userAId,
-        seasonId: league.seasonId,
-        gameweekId: gameweek.id,
-      }),
-      computeUserGameweekScore(db, {
-        leagueId: params.leagueId,
-        userId: matchup.userBId,
-        seasonId: league.seasonId,
-        gameweekId: gameweek.id,
-      }),
-    ]);
-    const winnerId = userAScore === userBScore ? null : userAScore > userBScore ? matchup.userAId : matchup.userBId;
+/**
+ * Runs after each FPL sync so leagues don't depend on a commissioner
+ * remembering to click "Finalize" every week. For every FPL-finished
+ * gameweek that still has an unfinalized matchup somewhere, re-syncs that
+ * gameweek's player stats one more time (bonus points are sometimes
+ * confirmed by FPL after the gameweek is marked finished) and finalizes it
+ * for every league that hasn't already been finalized for it. Gameweeks
+ * where every league is already finalized are skipped entirely, so this
+ * doesn't keep re-hitting the FPL API for old, fully-settled gameweeks.
+ */
+export async function autoFinalizeFinishedGameweeks(db: Db) {
+  const finishedGameweeks = await db.select().from(gameweeks).where(eq(gameweeks.isFinished, true));
 
-    await db.update(matchups).set({ userAScore, userBScore, winnerId }).where(eq(matchups.id, matchup.id));
+  let gameweeksFinalized = 0;
+  let matchupsFinalized = 0;
+
+  for (const gameweek of finishedGameweeks) {
+    const unfinalized = await db
+      .select({ leagueId: matchups.leagueId })
+      .from(matchups)
+      .where(and(eq(matchups.gameweekId, gameweek.id), or(isNull(matchups.userAScore), isNull(matchups.userBScore))));
+    if (unfinalized.length === 0) continue;
+
+    // Best-effort — a sync hiccup shouldn't block finalizing with whatever
+    // stats we already have.
+    await syncGameweekStats(db, gameweek.fplEventId).catch(() => null);
+
+    const leagueIds = [...new Set(unfinalized.map((r) => r.leagueId))];
+    for (const leagueId of leagueIds) {
+      const result = await finalizeGameweekForLeague(db, { leagueId, seasonId: gameweek.seasonId, gameweek });
+      matchupsFinalized += result.matchupsFinalized;
+    }
+    gameweeksFinalized++;
   }
 
-  await recalculateStandings(db, { leagueId: params.leagueId, seasonId: league.seasonId });
-
-  return { gameweekNumber: params.gameweekNumber, matchupsFinalized: gameweekMatchups.length };
+  return { gameweeksChecked: finishedGameweeks.length, gameweeksFinalized, matchupsFinalized };
 }
 
 interface StandingLine {

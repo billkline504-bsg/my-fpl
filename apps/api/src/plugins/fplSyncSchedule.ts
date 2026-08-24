@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import cron from "node-cron";
 import { syncAll } from "../domain/fplSync.js";
+import { autoFinalizeFinishedGameweeks } from "../domain/standings.js";
 
 export default fp(async (fastify: FastifyInstance) => {
   async function runSync() {
@@ -10,6 +11,15 @@ export default fp(async (fastify: FastifyInstance) => {
       fastify.log.info({ result }, "FPL sync completed");
     } catch (err) {
       fastify.log.error({ err }, "FPL sync failed");
+    }
+
+    try {
+      const result = await autoFinalizeFinishedGameweeks(fastify.db);
+      if (result.gameweeksFinalized > 0) {
+        fastify.log.info({ result }, "Auto-finalized gameweeks");
+      }
+    } catch (err) {
+      fastify.log.error({ err }, "Auto-finalization failed");
     }
   }
 

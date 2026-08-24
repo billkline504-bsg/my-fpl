@@ -131,39 +131,71 @@ Core tables (columns abbreviated to essentials):
 
 ## Build Phases
 
-**This session builds Phase 0–1.** Phases 2+ are follow-on work.
+**Status: all phases (0–8) are complete** as of 2026-08-24. This section
+is kept as a historical record of what each phase covered; see
+[README.md](../README.md) for how to run/use the app today and
+`git log` for exactly what shipped when.
 
-- **Phase 0 — Scaffolding**: pnpm/Turborepo monorepo, `apps/web` (Vite
+- **Phase 0 — Scaffolding** ✅: pnpm/Turborepo monorepo, `apps/web` (Vite
   React skeleton), `apps/api` (Fastify skeleton + health check),
   `packages/shared`, `packages/db` (Drizzle config), local Supabase project
   (`supabase init` + `supabase start`), env wiring, root README with setup
   instructions. (Mobile app scaffold deferred to Phase 6 to avoid Expo
   setup overhead before the API/data model stabilize.)
-- **Phase 1 — Auth & Leagues**: Supabase Auth wired into web app (sign
+- **Phase 1 — Auth & Leagues** ✅: Supabase Auth wired into web app (sign
   up/in/out); `profiles` sync trigger; Fastify JWT-verification middleware;
   league CRUD (create league, invite code join, view members, 8-user cap
   enforced) with a basic web UI.
-- **Phase 2 — FPL Sync & Player Data**: sync service, `clubs`/`players`/
+- **Phase 2 — FPL Sync & Player Data** ✅: sync service, `clubs`/`players`/
   `gameweeks` tables populated, player list/search UI.
-- **Phase 3 — Draft**: draft_events/draft_picks, snake draft turn engine,
+- **Phase 3 — Draft** ✅: draft_events/draft_picks, snake draft turn engine,
   live draft UI (web), commissioner controls to configure pick counts and
   start the draft.
-- **Phase 4 — Rosters & Transfer Window**: roster_players, transfer
+- **Phase 4 — Rosters & Transfer Window** ✅: roster_players, transfer
   window open/close, add/drop UI respecting squad-shape rules, second
   ("post_transfer") draft.
-- **Phase 5 — Scoring, Matchups & Standings**: round-robin schedule
+- **Phase 5 — Scoring, Matchups & Standings** ✅: round-robin schedule
   generation, scoring engine wired to real synced stats, gameweek
-  finalization job, league table + head-to-head results UI.
-- **Phase 6 — Mobile App**: Expo app in `apps/mobile` reusing
+  finalization, league table + head-to-head results UI. Gameweek
+  finalization was originally commissioner-triggered only; it's now also
+  automatic (see the note on auto-finalization below).
+- **Phase 6 — Mobile App** ✅: Expo app in `apps/mobile` reusing
   `packages/shared`, parity with web for auth/leagues/draft/roster/
   standings.
-- **Phase 7 — Stats & History**: season-long player performance views,
-  per-user league performance history across seasons.
-- **Phase 8 — Polish & Cloud-Readiness**: error states, loading states,
-  notifications (draft turn, transfer window closing), docs for migrating
-  the local Supabase project to Supabase Cloud.
+- **Phase 7 — Stats & History** ✅: season-long player performance views
+  (Players page + per-player stats panel), plus a commissioner "start next
+  season" action so a league's per-season history actually has more than
+  one season to show over time.
+- **Phase 8 — Polish & Cloud-Readiness** ✅: error states surfaced for every
+  primary query/mutation (not just silent empty states on failure), live
+  polling for the draft-turn indicator and transfer-window "closing soon"
+  flag, and README docs for migrating the local Supabase project to
+  Supabase Cloud.
 
-## Verification (Phase 0–1)
+### Post-plan work: automated gameweek finalization
+
+Beyond the original 8 phases: gameweek finalization no longer requires a
+commissioner to remember to click a button. After every FPL sync (the
+30-minute cron in
+[apps/api/src/plugins/fplSyncSchedule.ts](../apps/api/src/plugins/fplSyncSchedule.ts),
+or a manual "Sync from FPL" click), `autoFinalizeFinishedGameweeks` in
+[apps/api/src/domain/standings.ts](../apps/api/src/domain/standings.ts)
+finalizes every FPL-finished gameweek that still has an unfinalized
+matchup, for every affected league. The manual "Finalize GW" button in the
+Standings tab still exists as a commissioner override (e.g. to force a
+recompute after a stat correction) but is no longer required for normal
+operation.
+
+This also surfaced and fixed a real bug: `getOrCreateDefaultSeason`
+(used both by FPL sync and by new-league creation to pick "the" season)
+used to pick whichever season row had the latest start date. Once a
+league rolls onto a future season via "start next season" (Phase 7), that
+heuristic broke — live FPL sync started misattributing gameweek/stat data
+to the *future* season instead of the one actually being played. It now
+picks whichever season's date range contains today, falling back to the
+latest-start-date season only if none matches (e.g. no seasons exist yet).
+
+## Verification
 
 - `docker` running locally; `supabase start` boots Postgres/Auth/Studio
   without errors.
@@ -172,4 +204,6 @@ Core tables (columns abbreviated to essentials):
 - Manual browser test: sign up a user via the web app, confirm a `profiles`
   row is created, sign out/in, create a league, join it with a second test
   account via invite code, confirm the 8-user cap rejects a 9th join.
-- `pnpm test` runs any unit tests added for the scoring engine skeleton.
+- `pnpm test` runs unit tests for the scoring engine, snake draft order,
+  and round-robin schedule generation in `packages/shared`.
+- `pnpm typecheck` typechecks every package/app.

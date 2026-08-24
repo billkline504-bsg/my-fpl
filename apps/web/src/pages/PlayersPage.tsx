@@ -41,6 +41,9 @@ export function PlayersPage() {
           {syncMutation.data.stats
             ? ` · GW${syncMutation.data.stats.gameweekNumber} stats for ${syncMutation.data.stats.playersUpdated} players`
             : ""}
+          {syncMutation.data.finalized.gameweeksFinalized > 0
+            ? ` · auto-finalized ${syncMutation.data.finalized.gameweeksFinalized} gameweek(s) across ${syncMutation.data.finalized.matchupsFinalized} matchup(s)`
+            : ""}
           .
         </p>
       )}

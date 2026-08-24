@@ -44,6 +44,9 @@ export function PlayersScreen() {
             <Text style={ui.subtext}>
               Synced {syncMutation.data.clubs} clubs, {syncMutation.data.players} players,{" "}
               {syncMutation.data.gameweeks} gameweeks.
+              {syncMutation.data.finalized.gameweeksFinalized > 0
+                ? ` Auto-finalized ${syncMutation.data.finalized.gameweeksFinalized} gameweek(s) across ${syncMutation.data.finalized.matchupsFinalized} matchup(s).`
+                : ""}
             </Text>
           )}
           {syncMutation.isError && (

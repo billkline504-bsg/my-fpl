@@ -62,6 +62,40 @@ Then press `a`/`i` for an Android/iOS simulator, `w` for a browser preview
 (via react-native-web — handy for quick checks, but a real device/simulator
 is the real target), or scan the QR code in Expo Go on a physical device.
 
+### Using the app
+
+Once you're signed in (web or mobile), running a league end to end looks
+like this:
+
+1. **Create a league** on the Leagues tab (you become its commissioner) and
+   share the invite code it generates with up to 7 friends, who join via
+   "Join a league."
+2. **Sync player data**: on the Players tab, click "Sync from FPL" to pull
+   real clubs/players/gameweeks from the official FPL API. This also runs
+   automatically every 30 minutes while the API is running, so this is only
+   needed to get data immediately rather than waiting.
+3. **Run the initial draft**: as commissioner, open the league's Draft tab,
+   configure a pick count, and start it — it's a snake draft, so turn order
+   reverses each round. Once every member's squad reaches 15 players
+   (2 GK / 5 DEF / 5 MID / 3 FWD), the draft completes.
+4. **Generate the season schedule** on the Standings tab (commissioner
+   only) — this creates a round-robin head-to-head matchup for every
+   gameweek.
+5. **Open a transfer window** on the Roster tab (commissioner only) when
+   you want to allow add/drops, and configure how many picks the
+   post-transfer "top-up" draft gets once it closes.
+6. **Gameweeks finalize automatically.** As real gameweeks finish and get
+   synced, every league's matchups for that gameweek are scored (best
+   valid 11 of each manager's 15-player squad, requiring at least one GK)
+   and standings update — no manual step needed. The Standings tab still
+   has a manual "Finalize GW" button as a commissioner override (e.g. to
+   force a recompute after FPL corrects a stat), but you shouldn't need it
+   in normal operation.
+7. **Roll over to a new season** from the History tab (commissioner only)
+   once a season ends, to start a fresh draft/roster/standings cycle for
+   the same league while keeping every prior season's results visible in
+   its history table.
+
 ### Useful commands
 
 - `pnpm test` — run unit tests across all packages (currently the scoring

@@ -38,6 +38,7 @@ export interface FplSyncResult {
   players: number;
   gameweeks: number;
   stats: { gameweekNumber: number; playersUpdated: number } | null;
+  finalized: { gameweeksFinalized: number; matchupsFinalized: number };
 }
 
 export type DraftType = "initial" | "post_transfer";
