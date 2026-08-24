@@ -24,7 +24,9 @@ finalization, and cup competitions) is narrated in
 - Sends via [Resend](https://resend.com) (`apps/api/src/lib/resend.ts`,
   new `resend` dependency) — requires a `RESEND_API_KEY` env var (see
   `.env.example`); no email-sending infra existed in the repo before
-  this.
+  this. A gameweek is only recorded as reminded once at least one send
+  in the batch succeeds — if every send fails (e.g. the provider is
+  down), it's left unmarked so the next 15-minute tick retries it.
 
 ## 2026-08-24 — Fix stale icons after re-upload
 
