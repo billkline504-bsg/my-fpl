@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, notInArray, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, notInArray, or, type SQL } from "drizzle-orm";
 import { clubs, draftEvents, draftPicks, leagueMemberships, leagues, players, transferWindows, type Db } from "@my-fpl/db";
 import { getSnakeDraftTurnUserId, type Position } from "@my-fpl/shared";
 import { addPlayerToRoster, countActivePositions, getOwnedPlayerIdsForLeagueSeason, wouldExceedPositionCap } from "./rosters.js";
@@ -33,7 +33,13 @@ export async function createDraftEvent(
   const [existing] = await db
     .select()
     .from(draftEvents)
-    .where(and(eq(draftEvents.leagueId, params.leagueId), inArray(draftEvents.status, ["pending", "in_progress"])));
+    .where(
+      and(
+        eq(draftEvents.leagueId, params.leagueId),
+        eq(draftEvents.seasonId, league.seasonId),
+        inArray(draftEvents.status, ["pending", "in_progress"]),
+      ),
+    );
   if (existing) {
     throw new DraftAlreadyActiveError("This league already has a pending or in-progress draft");
   }
@@ -42,7 +48,13 @@ export async function createDraftEvent(
     const [priorInitial] = await db
       .select()
       .from(draftEvents)
-      .where(and(eq(draftEvents.leagueId, params.leagueId), eq(draftEvents.type, "initial")));
+      .where(
+        and(
+          eq(draftEvents.leagueId, params.leagueId),
+          eq(draftEvents.seasonId, league.seasonId),
+          eq(draftEvents.type, "initial"),
+        ),
+      );
     if (priorInitial) {
       throw new InitialDraftAlreadyExistsError("This league already has an initial draft");
     }
@@ -53,6 +65,7 @@ export async function createDraftEvent(
       .where(
         and(
           eq(draftEvents.leagueId, params.leagueId),
+          eq(draftEvents.seasonId, league.seasonId),
           eq(draftEvents.type, "initial"),
           eq(draftEvents.status, "completed"),
         ),
@@ -64,7 +77,7 @@ export async function createDraftEvent(
     const [window] = await db
       .select()
       .from(transferWindows)
-      .where(eq(transferWindows.leagueId, params.leagueId));
+      .where(and(eq(transferWindows.leagueId, params.leagueId), eq(transferWindows.seasonId, league.seasonId)));
     if (!window || window.closesAt > new Date()) {
       throw new TransferWindowNotClosedError("The transfer window must close before the post-transfer draft can start");
     }
@@ -126,18 +139,33 @@ export async function startDraftEvent(
 }
 
 export async function getDraftForLeague(db: Db, leagueId: string) {
+  const [league] = await db.select().from(leagues).where(eq(leagues.id, leagueId));
+  if (!league) return null;
+
   const active = await db
     .select()
     .from(draftEvents)
-    .where(and(eq(draftEvents.leagueId, leagueId), inArray(draftEvents.status, ["pending", "in_progress"])));
+    .where(
+      and(
+        eq(draftEvents.leagueId, leagueId),
+        eq(draftEvents.seasonId, league.seasonId),
+        inArray(draftEvents.status, ["pending", "in_progress"]),
+      ),
+    );
 
   let draftEvent = active[0];
   if (!draftEvent) {
     const completed = await db
       .select()
       .from(draftEvents)
-      .where(and(eq(draftEvents.leagueId, leagueId), eq(draftEvents.status, "completed")))
-      .orderBy(draftEvents.completedAt)
+      .where(
+        and(
+          eq(draftEvents.leagueId, leagueId),
+          eq(draftEvents.seasonId, league.seasonId),
+          eq(draftEvents.status, "completed"),
+        ),
+      )
+      .orderBy(desc(draftEvents.completedAt))
       .limit(1);
     draftEvent = completed[0];
   }

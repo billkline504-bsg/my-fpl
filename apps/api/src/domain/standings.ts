@@ -20,7 +20,10 @@ async function requireCommissioner(db: Db, leagueId: string, userId: string) {
 export async function generateSeasonSchedule(db: Db, params: { leagueId: string; requestedByUserId: string }) {
   const league = await requireCommissioner(db, params.leagueId, params.requestedByUserId);
 
-  const [existing] = await db.select().from(matchups).where(eq(matchups.leagueId, params.leagueId));
+  const [existing] = await db
+    .select()
+    .from(matchups)
+    .where(and(eq(matchups.leagueId, params.leagueId), eq(matchups.seasonId, league.seasonId)));
   if (existing) {
     throw new ScheduleAlreadyExistsError("A schedule has already been generated for this league");
   }

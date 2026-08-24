@@ -54,7 +54,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
         ) : tab === "standings" ? (
           <StandingsPanel league={league} />
         ) : (
-          <HistoryPanel league={league} />
+          <HistoryPanel league={league} onLeagueUpdated={(updated) => navigation.setParams({ league: updated })} />
         )}
       </View>
     </View>

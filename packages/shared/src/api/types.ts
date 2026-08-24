@@ -5,6 +5,7 @@ export interface League {
   name: string;
   commissionerId: string;
   seasonId: string;
+  seasonLabel: string;
   maxUsers: number;
   inviteCode: string;
   createdAt: string;

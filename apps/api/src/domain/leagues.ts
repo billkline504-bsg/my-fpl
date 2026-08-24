@@ -1,6 +1,6 @@
 import { customAlphabet } from "nanoid";
 import { eq, and, count } from "drizzle-orm";
-import { leagues, leagueMemberships, profiles, type Db } from "@my-fpl/db";
+import { leagues, leagueMemberships, profiles, seasons, type Db } from "@my-fpl/db";
 
 const generateInviteCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6);
 
@@ -38,7 +38,8 @@ export async function createLeague(db: Db, params: { commissionerId: string; nam
     userId: params.commissionerId,
   });
 
-  return league;
+  const [season] = await db.select().from(seasons).where(eq(seasons.id, league.seasonId));
+  return { ...league, seasonLabel: season?.label ?? "Unknown season" };
 }
 
 export async function joinLeagueByInviteCode(db: Db, params: { userId: string; inviteCode: string }) {
@@ -73,11 +74,20 @@ export async function joinLeagueByInviteCode(db: Db, params: { userId: string; i
 
 export async function listMyLeagues(db: Db, userId: string) {
   return db
-    .select({ league: leagues })
+    .select({
+      id: leagues.id,
+      name: leagues.name,
+      commissionerId: leagues.commissionerId,
+      seasonId: leagues.seasonId,
+      seasonLabel: seasons.label,
+      maxUsers: leagues.maxUsers,
+      inviteCode: leagues.inviteCode,
+      createdAt: leagues.createdAt,
+    })
     .from(leagueMemberships)
     .innerJoin(leagues, eq(leagueMemberships.leagueId, leagues.id))
-    .where(eq(leagueMemberships.userId, userId))
-    .then((rows) => rows.map((r) => r.league));
+    .innerJoin(seasons, eq(leagues.seasonId, seasons.id))
+    .where(eq(leagueMemberships.userId, userId));
 }
 
 export async function getLeagueMembers(db: Db, leagueId: string) {

@@ -102,6 +102,8 @@ export function createApiClient(config: ApiClientConfig) {
       request(`/leagues/${leagueId}/gameweeks/${gameweekNumber}/finalize`, { method: "POST" }),
     getPlayerStats: (playerId: string) => request<PlayerSeasonStats>(`/players/${playerId}/stats`),
     getLeagueHistory: (leagueId: string) => request<LeagueHistoryRow[]>(`/leagues/${leagueId}/history`),
+    startNextSeason: (leagueId: string, input: { label: string; startDate: string; endDate: string }) =>
+      request<League>(`/leagues/${leagueId}/seasons`, { method: "POST", body: JSON.stringify(input) }),
   };
 }
 

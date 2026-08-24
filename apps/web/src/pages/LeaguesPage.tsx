@@ -121,7 +121,8 @@ export function LeaguesPage() {
               <div>
                 <p className="font-medium text-slate-900">{league.name}</p>
                 <p className="text-xs text-slate-500">
-                  Invite code: <span className="font-mono">{league.inviteCode}</span> · max {league.maxUsers} users
+                  Invite code: <span className="font-mono">{league.inviteCode}</span> · max {league.maxUsers} users ·{" "}
+                  {league.seasonLabel}
                 </p>
               </div>
               <button
@@ -179,7 +180,7 @@ export function LeaguesPage() {
           ) : detailTab === "standings" ? (
             <StandingsPanel league={selectedLeague} />
           ) : (
-            <HistoryPanel league={selectedLeague} />
+            <HistoryPanel league={selectedLeague} onLeagueUpdated={setSelectedLeague} />
           )}
         </section>
       )}

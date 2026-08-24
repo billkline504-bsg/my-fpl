@@ -20,7 +20,13 @@ async function requireCommissioner(db: Db, leagueId: string, userId: string) {
 }
 
 export async function getTransferWindow(db: Db, leagueId: string) {
-  const [window] = await db.select().from(transferWindows).where(eq(transferWindows.leagueId, leagueId));
+  const [league] = await db.select().from(leagues).where(eq(leagues.id, leagueId));
+  if (!league) return null;
+
+  const [window] = await db
+    .select()
+    .from(transferWindows)
+    .where(and(eq(transferWindows.leagueId, leagueId), eq(transferWindows.seasonId, league.seasonId)));
   if (!window) return null;
 
   const now = new Date();
@@ -40,7 +46,10 @@ export async function createTransferWindow(
 ) {
   const league = await requireCommissioner(db, params.leagueId, params.requestedByUserId);
 
-  const [existing] = await db.select().from(transferWindows).where(eq(transferWindows.leagueId, params.leagueId));
+  const [existing] = await db
+    .select()
+    .from(transferWindows)
+    .where(and(eq(transferWindows.leagueId, params.leagueId), eq(transferWindows.seasonId, league.seasonId)));
   if (existing) {
     throw new TransferWindowExistsError("This league already has a transfer window configured");
   }

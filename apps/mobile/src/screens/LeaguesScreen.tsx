@@ -91,7 +91,7 @@ export function LeaguesScreen() {
           <View>
             <Text style={ui.text}>{item.name}</Text>
             <Text style={ui.subtext}>
-              Invite: {item.inviteCode} · max {item.maxUsers}
+              Invite: {item.inviteCode} · max {item.maxUsers} · {item.seasonLabel}
             </Text>
           </View>
           <Pressable style={ui.buttonSmall} onPress={() => navigation.navigate("LeagueDetail", { league: item })}>
