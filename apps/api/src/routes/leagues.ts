@@ -10,7 +10,13 @@ import {
   listMyLeagues,
   ProfileRequiredError,
 } from "../domain/leagues.js";
-import { getOrCreateDefaultSeason, NotCommissionerError, SeasonAlreadyActiveError, startNextSeasonForLeague } from "../domain/seasons.js";
+import {
+  getOrCreateDefaultSeason,
+  listSeasons,
+  NotCommissionerError,
+  SeasonAlreadyActiveError,
+  startNextSeasonForLeague,
+} from "../domain/seasons.js";
 
 const createLeagueSchema = z.object({
   name: z.string().min(1).max(100),
@@ -42,6 +48,10 @@ export default async function leagueRoutes(fastify: FastifyInstance) {
 
   fastify.get("/leagues", async (request) => {
     return listMyLeagues(fastify.db, request.user!.id);
+  });
+
+  fastify.get("/seasons", async () => {
+    return listSeasons(fastify.db);
   });
 
   fastify.post("/leagues", async (request, reply) => {

@@ -36,6 +36,11 @@ export async function getOrCreateDefaultSeason(db: Db) {
   return created;
 }
 
+/** Every season that exists, oldest first — lets a commissioner switch a league to any of them, not just type a remembered label. */
+export async function listSeasons(db: Db) {
+  return db.select().from(seasons).orderBy(seasons.startDate);
+}
+
 /**
  * Moves a league onto a new (or existing, by label) season. Historical data
  * — standings, matchups, rosters, draft events, transfer windows — all carry

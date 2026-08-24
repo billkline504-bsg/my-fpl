@@ -12,6 +12,13 @@ export interface League {
   createdAt: string;
 }
 
+export interface Season {
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface LeagueMember {
   userId: string;
   displayName: string;

@@ -13,6 +13,7 @@ import type {
   PlayerSeasonStats,
   Profile,
   RosterPlayer,
+  Season,
   StandingRow,
   TransferWindow,
 } from "./types.js";
@@ -106,6 +107,7 @@ export function createApiClient(config: ApiClientConfig) {
     getLeagueHistory: (leagueId: string) => request<LeagueHistoryRow[]>(`/leagues/${leagueId}/history`),
     startNextSeason: (leagueId: string, input: { label: string; startDate: string; endDate: string }) =>
       request<League>(`/leagues/${leagueId}/seasons`, { method: "POST", body: JSON.stringify(input) }),
+    listSeasons: () => request<Season[]>("/seasons"),
     listCups: (leagueId: string) => request<CupEvent[]>(`/leagues/${leagueId}/cups`),
     createCup: (
       leagueId: string,

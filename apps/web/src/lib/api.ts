@@ -32,6 +32,7 @@ export type {
   PlayerSeasonStats,
   Profile,
   RosterPlayer,
+  Season,
   StandingRow,
   TransferWindow,
 } from "@my-fpl/shared";

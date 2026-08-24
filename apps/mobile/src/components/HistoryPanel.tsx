@@ -5,6 +5,8 @@ import { api, type League, type LeagueHistoryRow } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 import { ui } from "../lib/ui";
 
+const NEW_SEASON_VALUE = "__new__";
+
 export function HistoryPanel({
   league,
   onLeagueUpdated,
@@ -16,6 +18,7 @@ export function HistoryPanel({
   const queryClient = useQueryClient();
   const isCommissioner = user?.id === league.commissionerId;
 
+  const [selectedSeasonId, setSelectedSeasonId] = useState(NEW_SEASON_VALUE);
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -25,23 +28,36 @@ export function HistoryPanel({
     queryKey: ["league-history", league.id],
     queryFn: () => api.getLeagueHistory(league.id),
   });
+  const seasonsQuery = useQuery({ queryKey: ["seasons"], queryFn: api.listSeasons });
 
-  const startNextSeasonMutation = useMutation({
-    mutationFn: () => api.startNextSeason(league.id, { label, startDate, endDate }),
+  const isCreatingNewSeason = selectedSeasonId === NEW_SEASON_VALUE;
+
+  const switchSeasonMutation = useMutation({
+    mutationFn: () => {
+      const target = seasonsQuery.data?.find((s) => s.id === selectedSeasonId);
+      return api.startNextSeason(league.id, {
+        label: target?.label ?? label,
+        startDate: target?.startDate ?? startDate,
+        endDate: target?.endDate ?? endDate,
+      });
+    },
     onSuccess: (updated) => {
       setSeasonError(null);
       setLabel("");
       setStartDate("");
       setEndDate("");
+      setSelectedSeasonId(NEW_SEASON_VALUE);
       onLeagueUpdated?.(updated);
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
+      queryClient.invalidateQueries({ queryKey: ["seasons"] });
       queryClient.invalidateQueries({ queryKey: ["league-history", league.id] });
       queryClient.invalidateQueries({ queryKey: ["standings", league.id] });
       queryClient.invalidateQueries({ queryKey: ["roster", league.id] });
       queryClient.invalidateQueries({ queryKey: ["draft", league.id] });
       queryClient.invalidateQueries({ queryKey: ["transfer-window", league.id] });
+      queryClient.invalidateQueries({ queryKey: ["cups", league.id] });
     },
-    onError: (err) => setSeasonError(err instanceof Error ? err.message : "Failed to start new season"),
+    onError: (err) => setSeasonError(err instanceof Error ? err.message : "Failed to switch season"),
   });
 
   const seasons = new Map<string, { seasonLabel: string; rows: LeagueHistoryRow[] }>();
@@ -64,26 +80,59 @@ export function HistoryPanel({
         </Text>
         {isCommissioner && (
           <View style={{ gap: 8 }}>
-            <TextInput
-              style={ui.input}
-              placeholder="New season label (e.g. 2027/28)"
-              value={label}
-              onChangeText={setLabel}
-            />
-            <TextInput
-              style={ui.input}
-              placeholder="Start date (YYYY-MM-DD)"
-              value={startDate}
-              onChangeText={setStartDate}
-            />
-            <TextInput style={ui.input} placeholder="End date (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
+            <Text style={ui.subtext}>Switch to</Text>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {seasonsQuery.data
+                ?.filter((s) => s.id !== league.seasonId)
+                .map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => setSelectedSeasonId(s.id)}
+                    style={[ui.buttonSmall, selectedSeasonId !== s.id && { backgroundColor: "#e2e8f0" }]}
+                  >
+                    <Text style={selectedSeasonId === s.id ? ui.buttonTextSmall : { fontSize: 12, color: "#334155" }}>
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              <Pressable
+                onPress={() => setSelectedSeasonId(NEW_SEASON_VALUE)}
+                style={[ui.buttonSmall, !isCreatingNewSeason && { backgroundColor: "#e2e8f0" }]}
+              >
+                <Text style={isCreatingNewSeason ? ui.buttonTextSmall : { fontSize: 12, color: "#334155" }}>
+                  + New season
+                </Text>
+              </Pressable>
+            </View>
+            {isCreatingNewSeason && (
+              <>
+                <TextInput
+                  style={ui.input}
+                  placeholder="New season label (e.g. 2028/29)"
+                  value={label}
+                  onChangeText={setLabel}
+                />
+                <TextInput
+                  style={ui.input}
+                  placeholder="Start date (YYYY-MM-DD)"
+                  value={startDate}
+                  onChangeText={setStartDate}
+                />
+                <TextInput
+                  style={ui.input}
+                  placeholder="End date (YYYY-MM-DD)"
+                  value={endDate}
+                  onChangeText={setEndDate}
+                />
+              </>
+            )}
             {seasonError && <Text style={ui.errorText}>{seasonError}</Text>}
             <Pressable
-              style={[ui.buttonSmall, startNextSeasonMutation.isPending && ui.buttonDisabled]}
-              onPress={() => startNextSeasonMutation.mutate()}
-              disabled={startNextSeasonMutation.isPending}
+              style={[ui.buttonSmall, switchSeasonMutation.isPending && ui.buttonDisabled]}
+              onPress={() => switchSeasonMutation.mutate()}
+              disabled={switchSeasonMutation.isPending}
             >
-              <Text style={ui.buttonTextSmall}>Start new season</Text>
+              <Text style={ui.buttonTextSmall}>{isCreatingNewSeason ? "Start new season" : "Switch season"}</Text>
             </Pressable>
           </View>
         )}

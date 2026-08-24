@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type League } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 
+const NEW_SEASON_VALUE = "__new__";
+
 export function HistoryPanel({
   league,
   onLeagueUpdated,
@@ -14,29 +16,43 @@ export function HistoryPanel({
   const queryClient = useQueryClient();
   const isCommissioner = user?.id === league.commissionerId;
 
+  const [selectedSeasonId, setSelectedSeasonId] = useState(NEW_SEASON_VALUE);
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [seasonError, setSeasonError] = useState<string | null>(null);
 
   const historyQuery = useQuery({ queryKey: ["league-history", league.id], queryFn: () => api.getLeagueHistory(league.id) });
+  const seasonsQuery = useQuery({ queryKey: ["seasons"], queryFn: api.listSeasons });
 
-  const startNextSeasonMutation = useMutation({
-    mutationFn: () => api.startNextSeason(league.id, { label, startDate, endDate }),
+  const isCreatingNewSeason = selectedSeasonId === NEW_SEASON_VALUE;
+
+  const switchSeasonMutation = useMutation({
+    mutationFn: () => {
+      const target = seasonsQuery.data?.find((s) => s.id === selectedSeasonId);
+      return api.startNextSeason(league.id, {
+        label: target?.label ?? label,
+        startDate: target?.startDate ?? startDate,
+        endDate: target?.endDate ?? endDate,
+      });
+    },
     onSuccess: (updated) => {
       setSeasonError(null);
       setLabel("");
       setStartDate("");
       setEndDate("");
+      setSelectedSeasonId(NEW_SEASON_VALUE);
       onLeagueUpdated?.(updated);
       queryClient.invalidateQueries({ queryKey: ["leagues"] });
+      queryClient.invalidateQueries({ queryKey: ["seasons"] });
       queryClient.invalidateQueries({ queryKey: ["league-history", league.id] });
       queryClient.invalidateQueries({ queryKey: ["standings", league.id] });
       queryClient.invalidateQueries({ queryKey: ["roster", league.id] });
       queryClient.invalidateQueries({ queryKey: ["draft", league.id] });
       queryClient.invalidateQueries({ queryKey: ["transfer-window", league.id] });
+      queryClient.invalidateQueries({ queryKey: ["cups", league.id] });
     },
-    onError: (err) => setSeasonError(err instanceof Error ? err.message : "Failed to start new season"),
+    onError: (err) => setSeasonError(err instanceof Error ? err.message : "Failed to switch season"),
   });
 
   const seasons = new Map<string, { seasonLabel: string; rows: typeof historyQuery.data }>();
@@ -62,49 +78,70 @@ export function HistoryPanel({
             className="space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
-              startNextSeasonMutation.mutate();
+              switchSeasonMutation.mutate();
             }}
           >
             <div className="flex flex-wrap gap-3">
               <label className="text-xs text-slate-500">
-                New season label
-                <input
-                  type="text"
-                  placeholder="2027/28"
-                  className="mt-1 block w-28 rounded border border-slate-300 px-2 py-1 text-sm"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  required
-                />
-              </label>
-              <label className="text-xs text-slate-500">
-                Start date
-                <input
-                  type="date"
+                Switch to
+                <select
                   className="mt-1 block rounded border border-slate-300 px-2 py-1 text-sm"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required
-                />
+                  value={selectedSeasonId}
+                  onChange={(e) => setSelectedSeasonId(e.target.value)}
+                >
+                  <option value={NEW_SEASON_VALUE}>+ Create new season</option>
+                  {seasonsQuery.data
+                    ?.filter((s) => s.id !== league.seasonId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                </select>
               </label>
-              <label className="text-xs text-slate-500">
-                End date
-                <input
-                  type="date"
-                  className="mt-1 block rounded border border-slate-300 px-2 py-1 text-sm"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
-                />
-              </label>
+              {isCreatingNewSeason && (
+                <>
+                  <label className="text-xs text-slate-500">
+                    New season label
+                    <input
+                      type="text"
+                      placeholder="2028/29"
+                      className="mt-1 block w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="text-xs text-slate-500">
+                    Start date
+                    <input
+                      type="date"
+                      className="mt-1 block rounded border border-slate-300 px-2 py-1 text-sm"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="text-xs text-slate-500">
+                    End date
+                    <input
+                      type="date"
+                      className="mt-1 block rounded border border-slate-300 px-2 py-1 text-sm"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      required
+                    />
+                  </label>
+                </>
+              )}
             </div>
             {seasonError && <p className="text-sm text-red-600">{seasonError}</p>}
             <button
               type="submit"
-              disabled={startNextSeasonMutation.isPending}
+              disabled={switchSeasonMutation.isPending}
               className="rounded bg-slate-900 px-3 py-1.5 text-xs text-white disabled:opacity-50"
             >
-              Start new season
+              {isCreatingNewSeason ? "Start new season" : "Switch season"}
             </button>
           </form>
         )}
