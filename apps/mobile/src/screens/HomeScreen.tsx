@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, SafeAreaView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 import { ui } from "../lib/ui";
 import { LeaguesScreen } from "./LeaguesScreen";
@@ -12,7 +12,7 @@ export function HomeScreen() {
   const [tab, setTab] = useState<Tab>("leagues");
 
   return (
-    <SafeAreaView style={ui.screen}>
+    <View style={ui.screen}>
       <View style={[ui.row, { padding: 16, paddingBottom: 0 }]}>
         <Text style={ui.subtext}>{user?.email}</Text>
         <Pressable onPress={() => signOut()}>
@@ -33,6 +33,6 @@ export function HomeScreen() {
       </View>
 
       {tab === "leagues" ? <LeaguesScreen /> : <PlayersScreen />}
-    </SafeAreaView>
+    </View>
   );
 }

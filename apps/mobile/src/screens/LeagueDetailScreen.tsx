@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pressable, SafeAreaView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../lib/api";
 import { ui } from "../lib/ui";
@@ -28,7 +28,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   });
 
   return (
-    <SafeAreaView style={ui.screen}>
+    <View style={ui.screen}>
       <View style={ui.tabBar}>
         {(["members", "draft", "roster", "standings", "history"] as const).map((t) => (
           <Pressable key={t} onPress={() => setTab(t)} style={[ui.tabButton, tab === t && ui.tabButtonActive]}>
@@ -57,6 +57,6 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
           <HistoryPanel league={league} />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

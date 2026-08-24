@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, SafeAreaView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
 import { ui } from "../lib/ui";
@@ -33,7 +33,7 @@ export function AuthScreen() {
   }
 
   return (
-    <SafeAreaView style={ui.screen}>
+    <View style={ui.screen}>
       <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 12 }}>
         <Text style={ui.h1}>{mode === "sign-in" ? "Sign in" : "Create an account"}</Text>
 
@@ -82,6 +82,6 @@ export function AuthScreen() {
           </Text>
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
