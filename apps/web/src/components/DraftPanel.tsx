@@ -15,8 +15,15 @@ export function DraftPanel({ league }: { league: League }) {
   const [search, setSearch] = useState("");
   const [position, setPosition] = useState<Position | "">("");
   const [pickError, setPickError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
-  const draftQuery = useQuery({ queryKey: ["draft", league.id], queryFn: () => api.getDraft(league.id) });
+  const draftQuery = useQuery({
+    queryKey: ["draft", league.id],
+    queryFn: () => api.getDraft(league.id),
+    // Polls while a draft is live so "it's your turn" and the board update
+    // without the page needing a manual refresh.
+    refetchInterval: (query) => (query.state.data?.status === "in_progress" ? 8000 : false),
+  });
   const membersQuery = useQuery({
     queryKey: ["league-members", league.id],
     queryFn: () => api.getLeagueMembers(league.id),
@@ -42,12 +49,20 @@ export function DraftPanel({ league }: { league: League }) {
 
   const createDraftMutation = useMutation({
     mutationFn: () => api.createDraft(league.id, { type: draftType, pickCount }),
-    onSuccess: invalidateDraft,
+    onSuccess: () => {
+      setSetupError(null);
+      invalidateDraft();
+    },
+    onError: (err) => setSetupError(err instanceof Error ? err.message : "Failed to create draft"),
   });
 
   const startDraftMutation = useMutation({
     mutationFn: () => api.startDraft(league.id, draft!.id),
-    onSuccess: invalidateDraft,
+    onSuccess: () => {
+      setSetupError(null);
+      invalidateDraft();
+    },
+    onError: (err) => setSetupError(err instanceof Error ? err.message : "Failed to start draft"),
   });
 
   const pickMutation = useMutation({
@@ -61,6 +76,14 @@ export function DraftPanel({ league }: { league: League }) {
 
   if (draftQuery.isLoading) {
     return <p className="text-sm text-slate-500">Loading draft...</p>;
+  }
+
+  if (draftQuery.isError) {
+    return (
+      <p className="text-sm text-red-600">
+        {draftQuery.error instanceof Error ? draftQuery.error.message : "Failed to load the draft"}
+      </p>
+    );
   }
 
   if (!draft) {
@@ -95,6 +118,7 @@ export function DraftPanel({ league }: { league: League }) {
           />
           <span className="self-center text-xs text-slate-500">picks per manager</span>
         </div>
+        {setupError && <p className="text-sm text-red-600">{setupError}</p>}
         <button
           type="submit"
           disabled={createDraftMutation.isPending}
@@ -113,6 +137,7 @@ export function DraftPanel({ league }: { league: League }) {
           {draft.type === "initial" ? "Initial" : "Post-transfer"} draft configured — {draft.configuredPickCount}{" "}
           picks per manager. Not started yet.
         </p>
+        {setupError && <p className="text-sm text-red-600">{setupError}</p>}
         {isCommissioner ? (
           <button
             onClick={() => startDraftMutation.mutate()}

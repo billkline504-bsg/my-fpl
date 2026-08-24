@@ -90,6 +90,11 @@ export function HistoryPanel({
       </View>
 
       {historyQuery.isLoading && <Text style={ui.subtext}>Loading history...</Text>}
+      {historyQuery.isError && (
+        <Text style={ui.errorText}>
+          {historyQuery.error instanceof Error ? historyQuery.error.message : "Failed to load season history"}
+        </Text>
+      )}
       {historyQuery.data?.length === 0 && (
         <Text style={ui.subtext}>No season history yet — finalize a gameweek to get started.</Text>
       )}

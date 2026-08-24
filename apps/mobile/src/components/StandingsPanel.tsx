@@ -70,6 +70,11 @@ export function StandingsPanel({ league }: { league: League }) {
           )}
         </View>
         {scheduleError && <Text style={ui.errorText}>{scheduleError}</Text>}
+        {standingsQuery.isError && (
+          <Text style={ui.errorText}>
+            {standingsQuery.error instanceof Error ? standingsQuery.error.message : "Failed to load standings"}
+          </Text>
+        )}
 
         <View style={ui.card}>
           <View style={[ui.row, { borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 6 }]}>

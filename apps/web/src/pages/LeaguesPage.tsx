@@ -112,6 +112,11 @@ export function LeaguesPage() {
 
       <section className="space-y-2">
         {leaguesQuery.isLoading && <p className="text-sm text-slate-500">Loading leagues...</p>}
+        {leaguesQuery.isError && (
+          <p className="text-sm text-red-600">
+            {leaguesQuery.error instanceof Error ? leaguesQuery.error.message : "Failed to load your leagues"}
+          </p>
+        )}
         {leaguesQuery.data?.length === 0 && (
           <p className="text-sm text-slate-500">You're not in any leagues yet.</p>
         )}

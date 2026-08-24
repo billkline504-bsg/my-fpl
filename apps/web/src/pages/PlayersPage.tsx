@@ -72,6 +72,11 @@ export function PlayersPage() {
       </div>
 
       {playersQuery.isLoading && <p className="text-sm text-slate-500">Loading players...</p>}
+      {playersQuery.isError && (
+        <p className="text-sm text-red-600">
+          {playersQuery.error instanceof Error ? playersQuery.error.message : "Failed to load players"}
+        </p>
+      )}
       {playersQuery.data?.length === 0 && (
         <p className="text-sm text-slate-500">
           No players found. If this is the first run, click "Sync from FPL" above.

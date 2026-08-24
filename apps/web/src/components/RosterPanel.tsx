@@ -24,9 +24,15 @@ export function RosterPanel({ league }: { league: League }) {
   const windowQuery = useQuery({
     queryKey: ["transfer-window", league.id],
     queryFn: () => api.getTransferWindow(league.id),
+    // Polls slowly so "closes soon"/"closed" flips over without a manual refresh.
+    refetchInterval: 60000,
   });
 
   const isWindowOpen = windowQuery.data?.isOpen ?? false;
+  const isClosingSoon =
+    isWindowOpen &&
+    !!windowQuery.data &&
+    new Date(windowQuery.data.closesAt).getTime() - Date.now() < 24 * 60 * 60 * 1000;
 
   const availablePlayersQuery = useQuery({
     queryKey: ["available-players", league.id, search, position],
@@ -80,6 +86,11 @@ export function RosterPanel({ league }: { league: League }) {
           ))}
         </div>
         {rosterQuery.isLoading && <p className="text-sm text-slate-500">Loading squad...</p>}
+        {rosterQuery.isError && (
+          <p className="text-sm text-red-600">
+            {rosterQuery.error instanceof Error ? rosterQuery.error.message : "Failed to load your squad"}
+          </p>
+        )}
         <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200">
           {rosterQuery.data?.map((rp) => (
             <li key={rp.id} className="flex items-center justify-between p-2 text-sm">
@@ -94,6 +105,11 @@ export function RosterPanel({ league }: { league: League }) {
 
       <div className="space-y-3 rounded-lg border border-slate-200 p-4">
         <h3 className="text-sm font-medium text-slate-700">Transfer window</h3>
+        {windowQuery.isError && (
+          <p className="text-sm text-red-600">
+            {windowQuery.error instanceof Error ? windowQuery.error.message : "Failed to load the transfer window"}
+          </p>
+        )}
         {windowQuery.data ? (
           <p className="text-sm text-slate-700">
             {new Date(windowQuery.data.opensAt).toLocaleString()} —{" "}
@@ -101,6 +117,7 @@ export function RosterPanel({ league }: { league: League }) {
             <span className={isWindowOpen ? "font-medium text-green-700" : "font-medium text-slate-500"}>
               {isWindowOpen ? "Open" : "Closed"}
             </span>
+            {isClosingSoon && <span className="font-medium text-amber-600"> · Closing soon</span>}
           </p>
         ) : isCommissioner ? (
           <form

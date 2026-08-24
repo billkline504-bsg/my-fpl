@@ -81,6 +81,11 @@ export function LeaguesScreen() {
 
           <Text style={ui.h2}>My Leagues</Text>
           {leaguesQuery.isLoading && <Text style={ui.subtext}>Loading leagues...</Text>}
+          {leaguesQuery.isError && (
+            <Text style={ui.errorText}>
+              {leaguesQuery.error instanceof Error ? leaguesQuery.error.message : "Failed to load your leagues"}
+            </Text>
+          )}
           {leaguesQuery.data?.length === 0 && <Text style={ui.subtext}>You're not in any leagues yet.</Text>}
         </View>
       }

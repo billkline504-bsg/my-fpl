@@ -64,6 +64,11 @@ export function StandingsPanel({ league }: { league: League }) {
           )}
         </div>
         {scheduleError && <p className="mb-2 text-sm text-red-600">{scheduleError}</p>}
+        {standingsQuery.isError && (
+          <p className="mb-2 text-sm text-red-600">
+            {standingsQuery.error instanceof Error ? standingsQuery.error.message : "Failed to load standings"}
+          </p>
+        )}
         <table className="w-full rounded-lg border border-slate-200 text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs text-slate-500">

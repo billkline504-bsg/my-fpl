@@ -21,6 +21,11 @@ export function PlayerStatsPanel({ playerId, onClose }: { playerId: string; onCl
       </View>
 
       {statsQuery.isLoading && <Text style={ui.subtext}>Loading stats...</Text>}
+      {statsQuery.isError && (
+        <Text style={ui.errorText}>
+          {statsQuery.error instanceof Error ? statsQuery.error.message : "Failed to load player stats"}
+        </Text>
+      )}
 
       {stats && (
         <>

@@ -28,9 +28,14 @@ export function RosterPanel({ league }: { league: League }) {
   const windowQuery = useQuery({
     queryKey: ["transfer-window", league.id],
     queryFn: () => api.getTransferWindow(league.id),
+    refetchInterval: 60000,
   });
 
   const isWindowOpen = windowQuery.data?.isOpen ?? false;
+  const isClosingSoon =
+    isWindowOpen &&
+    !!windowQuery.data &&
+    new Date(windowQuery.data.closesAt).getTime() - Date.now() < 24 * 60 * 60 * 1000;
 
   const availablePlayersQuery = useQuery({
     queryKey: ["available-players", league.id, search, position],
@@ -83,6 +88,11 @@ export function RosterPanel({ league }: { league: League }) {
           ))}
         </View>
         {rosterQuery.isLoading && <Text style={ui.subtext}>Loading squad...</Text>}
+        {rosterQuery.isError && (
+          <Text style={ui.errorText}>
+            {rosterQuery.error instanceof Error ? rosterQuery.error.message : "Failed to load your squad"}
+          </Text>
+        )}
         <View style={ui.card}>
           {rosterQuery.data?.map((rp) => (
             <View key={rp.id} style={ui.listItem}>
@@ -97,11 +107,17 @@ export function RosterPanel({ league }: { league: League }) {
 
       <View style={ui.card}>
         <Text style={ui.h2}>Transfer window</Text>
+        {windowQuery.isError && (
+          <Text style={ui.errorText}>
+            {windowQuery.error instanceof Error ? windowQuery.error.message : "Failed to load the transfer window"}
+          </Text>
+        )}
         {windowQuery.data ? (
           <Text style={ui.text}>
             {new Date(windowQuery.data.opensAt).toLocaleString()} —{" "}
             {new Date(windowQuery.data.closesAt).toLocaleString()} ·{" "}
             <Text style={isWindowOpen ? ui.successText : ui.subtext}>{isWindowOpen ? "Open" : "Closed"}</Text>
+            {isClosingSoon && <Text style={{ color: "#b45309", fontWeight: "600" }}> · Closing soon</Text>}
           </Text>
         ) : isCommissioner ? (
           <View style={{ gap: 8 }}>

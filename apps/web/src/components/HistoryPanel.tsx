@@ -111,6 +111,11 @@ export function HistoryPanel({
       </div>
 
       {historyQuery.isLoading && <p className="text-sm text-slate-500">Loading history...</p>}
+      {historyQuery.isError && (
+        <p className="text-sm text-red-600">
+          {historyQuery.error instanceof Error ? historyQuery.error.message : "Failed to load season history"}
+        </p>
+      )}
       {historyQuery.data?.length === 0 && (
         <p className="text-sm text-slate-500">No season history yet — finalize a gameweek to get started.</p>
       )}

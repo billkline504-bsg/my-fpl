@@ -71,6 +71,55 @@ is the real target), or scan the QR code in Expo Go on a physical device.
 - `supabase stop` — stop the local Supabase stack
 - `supabase status` — reprint the local URLs/keys if you lose them
 
+### Deploying to Supabase Cloud
+
+This project is built to move from local, self-hosted Supabase to
+[Supabase Cloud](https://supabase.com) without any application code changes
+— the API verifies auth tokens by fetching the JWKS from whatever
+`SUPABASE_URL` it's given
+([apps/api/src/plugins/authenticate.ts](apps/api/src/plugins/authenticate.ts)),
+so it works identically against the local stack or a cloud project. Only
+config changes are needed:
+
+1. **Create a Supabase Cloud project** at [supabase.com](https://supabase.com).
+   From its dashboard, note down:
+   - **Settings → API**: the Project URL and the `anon` public key.
+   - **Settings → Database**: a connection string (the "Direct connection"
+     one works fine — this app is a long-running server, not serverless, so
+     it doesn't need the pooler).
+2. **Push the schema** to the cloud database — no Supabase CLI migrations
+   are used here, just Drizzle:
+   ```bash
+   DATABASE_URL="<cloud-connection-string>" pnpm db:push
+   ```
+3. **Update env vars** to point at the cloud project instead of localhost,
+   following the same variables described in "First-time setup" above:
+   - `apps/api/.env` — `DATABASE_URL` (cloud connection string),
+     `SUPABASE_URL` (`https://<project-ref>.supabase.co`),
+     `SUPABASE_SERVICE_ROLE_KEY` (from Settings → API).
+   - `apps/web/.env.local` (or your production env) — `VITE_SUPABASE_URL`,
+     `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL` pointing at wherever you
+     host the API (see below).
+   - `apps/mobile/.env` — the same three values with the `EXPO_PUBLIC_`
+     prefix.
+4. **Host the API and web app separately** — Supabase Cloud only hosts
+   Postgres/Auth/Storage, not this repo's Fastify API or Vite web app.
+   `apps/api` is a plain Node/Fastify server (deployable to Fly.io, Render,
+   Railway, a VPS, etc.); `apps/web` builds to static files
+   (`pnpm --filter @my-fpl/web build`) deployable to any static host
+   (Vercel, Netlify, Cloudflare Pages).
+5. **Know the FPL sync cron's limitation**: the scheduled sync
+   ([apps/api/src/plugins/fplSyncSchedule.ts](apps/api/src/plugins/fplSyncSchedule.ts))
+   runs via `node-cron` inside the API process, so it only fires while that
+   process stays alive. On a host that sleeps/restarts the process (most
+   serverless platforms), point an external scheduler (e.g. a cron job or
+   GitHub Actions schedule) at the existing manual "Sync from FPL" endpoint
+   (`POST /fpl/sync`) instead of relying on the in-process cron.
+6. **Bringing over existing local data** (optional): if you want your local
+   dev league/draft data in the cloud project instead of starting fresh, use
+   `pg_dump`/`pg_restore` (or `supabase db dump`) against the local and cloud
+   connection strings.
+
 ### Project layout
 
 ```

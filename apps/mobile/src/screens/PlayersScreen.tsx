@@ -68,6 +68,11 @@ export function PlayersScreen() {
           </View>
 
           {playersQuery.isLoading && <Text style={ui.subtext}>Loading players...</Text>}
+          {playersQuery.isError && (
+            <Text style={ui.errorText}>
+              {playersQuery.error instanceof Error ? playersQuery.error.message : "Failed to load players"}
+            </Text>
+          )}
           {playersQuery.data?.length === 0 && (
             <Text style={ui.subtext}>No players found. If this is the first run, tap "Sync from FPL" above.</Text>
           )}

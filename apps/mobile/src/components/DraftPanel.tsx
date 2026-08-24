@@ -17,8 +17,13 @@ export function DraftPanel({ league }: { league: League }) {
   const [search, setSearch] = useState("");
   const [position, setPosition] = useState<Position | "">("");
   const [pickError, setPickError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
-  const draftQuery = useQuery({ queryKey: ["draft", league.id], queryFn: () => api.getDraft(league.id) });
+  const draftQuery = useQuery({
+    queryKey: ["draft", league.id],
+    queryFn: () => api.getDraft(league.id),
+    refetchInterval: (query) => (query.state.data?.status === "in_progress" ? 8000 : false),
+  });
   const membersQuery = useQuery({
     queryKey: ["league-members", league.id],
     queryFn: () => api.getLeagueMembers(league.id),
@@ -45,12 +50,20 @@ export function DraftPanel({ league }: { league: League }) {
 
   const createDraftMutation = useMutation({
     mutationFn: () => api.createDraft(league.id, { type: draftType, pickCount: Number(pickCount) }),
-    onSuccess: invalidateDraft,
+    onSuccess: () => {
+      setSetupError(null);
+      invalidateDraft();
+    },
+    onError: (err) => setSetupError(err instanceof Error ? err.message : "Failed to create draft"),
   });
 
   const startDraftMutation = useMutation({
     mutationFn: () => api.startDraft(league.id, draft!.id),
-    onSuccess: invalidateDraft,
+    onSuccess: () => {
+      setSetupError(null);
+      invalidateDraft();
+    },
+    onError: (err) => setSetupError(err instanceof Error ? err.message : "Failed to start draft"),
   });
 
   const pickMutation = useMutation({
@@ -64,6 +77,14 @@ export function DraftPanel({ league }: { league: League }) {
 
   if (draftQuery.isLoading) {
     return <Text style={ui.subtext}>Loading draft...</Text>;
+  }
+
+  if (draftQuery.isError) {
+    return (
+      <Text style={ui.errorText}>
+        {draftQuery.error instanceof Error ? draftQuery.error.message : "Failed to load the draft"}
+      </Text>
+    );
   }
 
   if (!draft) {
@@ -93,6 +114,7 @@ export function DraftPanel({ league }: { league: League }) {
           onChangeText={setPickCount}
           placeholder="Picks per manager"
         />
+        {setupError && <Text style={ui.errorText}>{setupError}</Text>}
         <Pressable
           style={[ui.button, createDraftMutation.isPending && ui.buttonDisabled]}
           onPress={() => createDraftMutation.mutate()}
@@ -111,6 +133,7 @@ export function DraftPanel({ league }: { league: League }) {
           {draft.type === "initial" ? "Initial" : "Post-transfer"} draft configured — {draft.configuredPickCount}{" "}
           picks per manager. Not started yet.
         </Text>
+        {setupError && <Text style={ui.errorText}>{setupError}</Text>}
         {isCommissioner ? (
           <Pressable
             style={[ui.button, startDraftMutation.isPending && ui.buttonDisabled]}
