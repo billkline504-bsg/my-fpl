@@ -216,6 +216,10 @@ as league gameweek finalization. If the configured rounds run out before
 the field is down to one entrant, whoever's left are co-champions rather
 than the cup blocking indefinitely.
 
+**Changes after this point are tracked in [CHANGELOG.md](../CHANGELOG.md)**
+instead of new prose subsections here, to avoid keeping two running
+histories in sync.
+
 ## Verification
 
 - `docker` running locally; `supabase start` boots Postgres/Auth/Studio
