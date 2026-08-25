@@ -147,6 +147,16 @@ Local Supabase (Postgres + Auth) runs via the Supabase CLI in Docker.
   hanging on interactive rename prompts, and `supabase/config.toml`
   storage buckets not provisioning when `supabase start` restores from a
   backup snapshot instead of a fresh init.
+- `apps/api/.env`'s `REMINDER_FROM_EMAIL` is set to Resend's sandbox
+  sender (`onboarding@resend.dev`) because no sending domain is verified
+  yet — no domain has been registered for this project. Sandbox mode
+  only delivers to the Resend account's own email
+  (`bill.kline504@gmail.com`), so gameweek reminder emails currently
+  reach that address only; every other league member's send fails
+  per-recipient (see `runGameweekReminders` in
+  `apps/api/src/domain/reminders.ts` — this is expected, not a bug).
+  Once a real domain is registered and verified in Resend, update
+  `REMINDER_FROM_EMAIL` to use it.
 
 ## Testing changes end-to-end
 
