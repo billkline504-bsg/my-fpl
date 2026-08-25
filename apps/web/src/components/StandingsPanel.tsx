@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type League } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
+import { MatchupLineups } from "./MatchupLineups";
 
 export function StandingsPanel({ league }: { league: League }) {
   const { user } = useAuth();
@@ -9,6 +10,7 @@ export function StandingsPanel({ league }: { league: League }) {
   const isCommissioner = user?.id === league.commissionerId;
 
   const [gameweekNumber, setGameweekNumber] = useState(1);
+  const [expandedMatchupId, setExpandedMatchupId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [finalizeResult, setFinalizeResult] = useState<string | null>(null);
@@ -135,14 +137,23 @@ export function StandingsPanel({ league }: { league: League }) {
         )}
         <ul className="divide-y divide-slate-200">
           {matchupsQuery.data?.map((m) => (
-            <li key={m.id} className="flex items-center justify-between p-2 text-sm">
-              <span className={m.winnerId === m.userAId ? "font-semibold text-slate-900" : "text-slate-700"}>
-                {displayName(m.userAId)} {m.userAScore ?? "-"}
-              </span>
-              <span className="text-slate-400">vs</span>
-              <span className={m.winnerId === m.userBId ? "font-semibold text-slate-900" : "text-slate-700"}>
-                {m.userBScore ?? "-"} {displayName(m.userBId)}
-              </span>
+            <li key={m.id}>
+              <button
+                type="button"
+                onClick={() => setExpandedMatchupId(expandedMatchupId === m.id ? null : m.id)}
+                className="flex w-full items-center justify-between p-2 text-sm"
+              >
+                <span className={m.winnerId === m.userAId ? "font-semibold text-slate-900" : "text-slate-700"}>
+                  {displayName(m.userAId)} {m.userAScore ?? "-"}
+                </span>
+                <span className="text-slate-400">vs</span>
+                <span className={m.winnerId === m.userBId ? "font-semibold text-slate-900" : "text-slate-700"}>
+                  {m.userBScore ?? "-"} {displayName(m.userBId)}
+                </span>
+              </button>
+              {expandedMatchupId === m.id && (
+                <MatchupLineups league={league} gameweekNumber={gameweekNumber} matchup={m} displayName={displayName} />
+              )}
             </li>
           ))}
         </ul>

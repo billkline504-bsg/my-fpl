@@ -102,6 +102,20 @@ export interface Matchup {
   winnerId: string | null;
 }
 
+export interface LineupPlayer {
+  playerId: string;
+  webName: string;
+  position: Position;
+  club: { id: string; name: string; shortName: string };
+  points: number;
+}
+
+export interface GameweekLineup {
+  starters: LineupPlayer[];
+  bench: LineupPlayer[];
+  totalPoints: number;
+}
+
 export interface StandingRow {
   userId: string;
   displayName: string;

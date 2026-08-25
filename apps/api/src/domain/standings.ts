@@ -1,8 +1,9 @@
 import { and, desc, eq, inArray, isNotNull, or, isNull } from "drizzle-orm";
 import { gameweeks, leagueMemberships, leagues, matchups, playerGameweekStats, profiles, standings, type Db } from "@my-fpl/db";
 import { computeTopEleven, generateRoundRobin, MATCH_POINTS, type PlayerGameweekScore } from "@my-fpl/shared";
-import { getActiveRosterPlayers } from "./rosters.js";
+import { ensureRoster, getActiveRosterPlayers } from "./rosters.js";
 import { syncGameweekStats } from "./fplSync.js";
+import { persistGameweekLineup } from "./lineups.js";
 
 type Gameweek = typeof gameweeks.$inferSelect;
 
@@ -67,16 +68,17 @@ export async function generateSeasonSchedule(db: Db, params: { leagueId: string;
   return { rounds: rounds.length, gameweeks: seasonGameweeks.length, matchupsCreated: rows.length };
 }
 
-export async function computeUserGameweekScore(
+export async function computeUserGameweekLineup(
   db: Db,
   params: { leagueId: string; userId: string; seasonId: string; gameweekId: string },
 ) {
-  const roster = await getActiveRosterPlayers(db, {
-    leagueId: params.leagueId,
-    userId: params.userId,
-    seasonId: params.seasonId,
-  });
-  if (roster.length === 0) return 0;
+  const [roster, activeRoster] = await Promise.all([
+    ensureRoster(db, params),
+    getActiveRosterPlayers(db, params),
+  ]);
+  if (activeRoster.length === 0) {
+    return { rosterId: roster.id, positionByPlayerId: new Map(), startingIds: [], benchIds: [], totalPoints: 0 };
+  }
 
   const statRows = await db
     .select()
@@ -86,19 +88,29 @@ export async function computeUserGameweekScore(
         eq(playerGameweekStats.gameweekId, params.gameweekId),
         inArray(
           playerGameweekStats.playerId,
-          roster.map((r) => r.player.id),
+          activeRoster.map((r) => r.player.id),
         ),
       ),
     );
   const pointsByPlayerId = new Map(statRows.map((s) => [s.playerId, s.points]));
 
-  const scored: PlayerGameweekScore[] = roster.map((r) => ({
+  const scored: PlayerGameweekScore[] = activeRoster.map((r) => ({
     playerId: r.player.id,
     position: r.player.position,
     points: pointsByPlayerId.get(r.player.id) ?? 0,
   }));
 
-  return computeTopEleven(scored).totalPoints;
+  const positionByPlayerId = new Map(activeRoster.map((r) => [r.player.id, r.player.position]));
+
+  return { rosterId: roster.id, positionByPlayerId, ...computeTopEleven(scored) };
+}
+
+export async function computeUserGameweekScore(
+  db: Db,
+  params: { leagueId: string; userId: string; seasonId: string; gameweekId: string },
+) {
+  const result = await computeUserGameweekLineup(db, params);
+  return result.totalPoints;
 }
 
 async function finalizeGameweekForLeague(
@@ -111,23 +123,29 @@ async function finalizeGameweekForLeague(
     .where(and(eq(matchups.leagueId, params.leagueId), eq(matchups.gameweekId, params.gameweek.id)));
 
   for (const matchup of gameweekMatchups) {
-    const [userAScore, userBScore] = await Promise.all([
-      computeUserGameweekScore(db, {
+    const [lineupA, lineupB] = await Promise.all([
+      computeUserGameweekLineup(db, {
         leagueId: params.leagueId,
         userId: matchup.userAId,
         seasonId: params.seasonId,
         gameweekId: params.gameweek.id,
       }),
-      computeUserGameweekScore(db, {
+      computeUserGameweekLineup(db, {
         leagueId: params.leagueId,
         userId: matchup.userBId,
         seasonId: params.seasonId,
         gameweekId: params.gameweek.id,
       }),
     ]);
+    const userAScore = lineupA.totalPoints;
+    const userBScore = lineupB.totalPoints;
     const winnerId = userAScore === userBScore ? null : userAScore > userBScore ? matchup.userAId : matchup.userBId;
 
     await db.update(matchups).set({ userAScore, userBScore, winnerId }).where(eq(matchups.id, matchup.id));
+    await Promise.all([
+      persistGameweekLineup(db, { gameweekId: params.gameweek.id, ...lineupA }),
+      persistGameweekLineup(db, { gameweekId: params.gameweek.id, ...lineupB }),
+    ]);
   }
 
   await recalculateStandings(db, { leagueId: params.leagueId, seasonId: params.seasonId });

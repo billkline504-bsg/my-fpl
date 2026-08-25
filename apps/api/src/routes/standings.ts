@@ -12,9 +12,15 @@ import {
   ScheduleAlreadyExistsError,
 } from "../domain/standings.js";
 import { getLeagueHistory } from "../domain/leagueHistory.js";
+import { GameweekNotFoundError as LineupGameweekNotFoundError, getTeamGameweekLineup, LeagueNotFoundError } from "../domain/lineups.js";
 
 const gameweekQuerySchema = z.object({
   gameweek: z.coerce.number().int().min(1),
+});
+
+const lineupQuerySchema = z.object({
+  gameweek: z.coerce.number().int().min(1),
+  userId: z.string().uuid(),
 });
 
 function sendStandingsError(reply: FastifyReply, err: unknown) {
@@ -52,6 +58,21 @@ export default async function standingsRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { leagueId: string } }>("/leagues/:leagueId/matchups", async (request) => {
     const query = gameweekQuerySchema.parse(request.query);
     return getMatchupsForGameweek(fastify.db, { leagueId: request.params.leagueId, gameweekNumber: query.gameweek });
+  });
+
+  fastify.get<{ Params: { leagueId: string } }>("/leagues/:leagueId/lineup", async (request, reply) => {
+    const query = lineupQuerySchema.parse(request.query);
+    try {
+      return await getTeamGameweekLineup(fastify.db, {
+        leagueId: request.params.leagueId,
+        userId: query.userId,
+        gameweekNumber: query.gameweek,
+      });
+    } catch (err) {
+      if (err instanceof LeagueNotFoundError) return reply.code(404).send({ error: err.message });
+      if (err instanceof LineupGameweekNotFoundError) return reply.code(404).send({ error: err.message });
+      throw err;
+    }
   });
 
   fastify.post<{ Params: { leagueId: string; gameweekNumber: string } }>(

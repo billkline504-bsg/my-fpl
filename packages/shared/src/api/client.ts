@@ -5,6 +5,7 @@ import type {
   DraftEvent,
   DraftType,
   FplSyncResult,
+  GameweekLineup,
   League,
   LeagueHistoryRow,
   LeagueMember,
@@ -124,6 +125,8 @@ export function createApiClient(config: ApiClientConfig) {
     getStandings: (leagueId: string) => request<StandingRow[]>(`/leagues/${leagueId}/standings`),
     getMatchups: (leagueId: string, gameweek: number) =>
       request<Matchup[]>(`/leagues/${leagueId}/matchups?gameweek=${gameweek}`),
+    getTeamGameweekLineup: (leagueId: string, gameweek: number, userId: string) =>
+      request<GameweekLineup>(`/leagues/${leagueId}/lineup?gameweek=${gameweek}&userId=${userId}`),
     finalizeGameweek: (leagueId: string, gameweekNumber: number) =>
       request(`/leagues/${leagueId}/gameweeks/${gameweekNumber}/finalize`, { method: "POST" }),
     getPlayerStats: (playerId: string) => request<PlayerSeasonStats>(`/players/${playerId}/stats`),

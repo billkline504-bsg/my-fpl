@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { api, type League } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 import { ui } from "../lib/ui";
+import { MatchupLineups } from "./MatchupLineups";
 
 export function StandingsPanel({ league }: { league: League }) {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ export function StandingsPanel({ league }: { league: League }) {
   const isCommissioner = user?.id === league.commissionerId;
 
   const [gameweekNumber, setGameweekNumber] = useState("1");
+  const [expandedMatchupId, setExpandedMatchupId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [finalizeResult, setFinalizeResult] = useState<string | null>(null);
@@ -128,14 +130,22 @@ export function StandingsPanel({ league }: { league: League }) {
           <Text style={ui.subtext}>No matchups scheduled for this gameweek.</Text>
         )}
         {matchupsQuery.data?.map((m) => (
-          <View key={m.id} style={ui.listItem}>
-            <Text style={[ui.text, m.winnerId === m.userAId && { fontWeight: "700" }]}>
-              {displayName(m.userAId)} {m.userAScore ?? "-"}
-            </Text>
-            <Text style={ui.subtext}>vs</Text>
-            <Text style={[ui.text, m.winnerId === m.userBId && { fontWeight: "700" }]}>
-              {m.userBScore ?? "-"} {displayName(m.userBId)}
-            </Text>
+          <View key={m.id}>
+            <Pressable
+              style={ui.listItem}
+              onPress={() => setExpandedMatchupId(expandedMatchupId === m.id ? null : m.id)}
+            >
+              <Text style={[ui.text, m.winnerId === m.userAId && { fontWeight: "700" }]}>
+                {displayName(m.userAId)} {m.userAScore ?? "-"}
+              </Text>
+              <Text style={ui.subtext}>vs</Text>
+              <Text style={[ui.text, m.winnerId === m.userBId && { fontWeight: "700" }]}>
+                {m.userBScore ?? "-"} {displayName(m.userBId)}
+              </Text>
+            </Pressable>
+            {expandedMatchupId === m.id && (
+              <MatchupLineups league={league} gameweekNumber={gwNumber} matchup={m} displayName={displayName} />
+            )}
           </View>
         ))}
       </View>

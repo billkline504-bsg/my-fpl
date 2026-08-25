@@ -246,6 +246,39 @@ export const matchups = pgTable("matchups", {
   winnerId: uuid("winner_id").references(() => profiles.id),
 });
 
+export const lineupSlotEnum = pgEnum("lineup_slot", ["starter", "bench"]);
+
+export const gameweekLineups = pgTable(
+  "gameweek_lineups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    rosterId: uuid("roster_id")
+      .notNull()
+      .references(() => rosters.id, { onDelete: "cascade" }),
+    gameweekId: uuid("gameweek_id")
+      .notNull()
+      .references(() => gameweeks.id, { onDelete: "cascade" }),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.rosterId, t.gameweekId)],
+);
+
+export const gameweekLineupPlayers = pgTable(
+  "gameweek_lineup_players",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    lineupId: uuid("lineup_id")
+      .notNull()
+      .references(() => gameweekLineups.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id),
+    position: positionEnum("position").notNull(),
+    slot: lineupSlotEnum("slot").notNull(),
+  },
+  (t) => [unique().on(t.lineupId, t.playerId)],
+);
+
 export const standings = pgTable(
   "standings",
   {

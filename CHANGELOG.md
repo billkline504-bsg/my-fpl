@@ -7,6 +7,26 @@ this file existed (the original 8 build phases, automated gameweek
 finalization, and cup competitions) is narrated in
 [docs/plan.md](docs/plan.md) instead — this file picks up from there.
 
+## 2026-08-25 — Gameweek matchup lineups
+
+- Each matchup row in standings now expands (click on web, tap on
+  mobile) to show both managers' actual starting XI and bench for that
+  gameweek, with each player's points.
+- `computeUserGameweekScore` split into `computeUserGameweekLineup`
+  (`apps/api/src/domain/standings.ts`), which returns the full
+  starters/bench breakdown and per-player position instead of just a
+  total, so the same computation backs both scoring and lineup display.
+- New `GET /leagues/:leagueId/lineup?gameweek=&userId=` endpoint
+  (`getTeamGameweekLineup` in the new `apps/api/src/domain/lineups.ts`).
+  Falls back to a live computation for gameweeks that never went
+  through `finalizeGameweekForLeague` (pre-feature history, bye weeks)
+  instead of erroring.
+- New `gameweek_lineups`/`gameweek_lineup_players` tables persist a
+  snapshot of each roster's starters/bench at finalization time
+  (`persistGameweekLineup`), overwritten if the gameweek is
+  re-finalized, so a displayed lineup doesn't silently drift if a
+  roster or its stats are edited later.
+
 ## 2026-08-24 — Gameweek deadline reminder emails
 
 - Managers now get two reminder emails per gameweek before its deadline
